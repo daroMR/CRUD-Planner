@@ -52,7 +52,8 @@ def parse_description(description):
     
     tags = {}
     # Patrón para encontrar ##Clave: Valor o ##Clave Valor
-    matches = re.finditer(r'##([\w\$\-]+)(?:[:\s=]+)([^\n\r]+)', description)
+    # Asegura que se detenga antes de la siguiente etiqueta ## o del final de la línea
+    matches = re.finditer(r'##([\w\$\-]+)(?:[:\s=]+)(.*?)(?=\s*##|$)', description)
     
     for match in matches:
         key = match.group(1).strip()
@@ -61,19 +62,26 @@ def parse_description(description):
         # Alias Amigables
         if key == '$' or key.lower() == 'dinero': 
             key = 'Dinero'
-            try: value = float(value.replace('$', '').replace(',', '').strip())
+            try: 
+                # Buscar el primer número en el valor (ignora $, texto extra, etc.)
+                num_match = re.search(r'[\d,.]+', value)
+                if num_match:
+                    value = float(num_match.group(0).replace(',', ''))
             except: pass
         elif key == 'F' or key.lower() == 'fecha': 
             key = 'Fecha'
-            try: value = datetime.strptime(value, '%Y-%m-%d')
+            try: value = datetime.strptime(value.strip(), '%Y-%m-%d')
             except: pass
         elif key == 'D' or key.lower() == 'desc': 
             key = 'Descripcion_Extra'
         elif key.startswith('B-') or key.lower().startswith('check'):
             key = key.replace('B-', '').replace('Check-', '').replace('check-', '')
-            value = value.upper() in ['ON', 'TRUE', '1', 'SI', 'YES']
+            value = value.upper().strip() in ['ON', 'TRUE', '1', 'SI', 'YES']
         elif key.startswith('PR-') or key.startswith('PG-') or key == 'PS':
-            try: value = float(value.replace(',', '').strip())
+            try: 
+                num_match = re.search(r'[\d,.]+', value)
+                if num_match:
+                    value = float(num_match.group(0).replace(',', ''))
             except: pass
             
         tags[key] = value

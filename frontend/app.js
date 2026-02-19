@@ -1,5 +1,5 @@
 // URL base de la API
-const api = 'http://localhost:8000';
+const api = 'http://localhost:3000';
 
 // -----------------------------
 // Logging, UI State & Global Data
@@ -103,6 +103,41 @@ async function refreshAll() {
     await listarTareas();
 }
 
+function renderMasterTable(plansInput) {
+    const tbody = document.getElementById('masterTableBody');
+    if (!tbody) return;
+
+    // Si se pasan planes, los guardamos en una variable global para la búsqueda reactiva
+    if (plansInput) window.lastHierarchicalData = plansInput;
+    const plans = plansInput || window.lastHierarchicalData || [];
+
+    const search = (document.getElementById('masterSearch')?.value || '').toLowerCase();
+    tbody.innerHTML = '';
+
+    plans.forEach(p => {
+        (p.buckets || []).forEach(b => {
+            (b.tasks || []).forEach(t => {
+                const searchStr = `${p.name} ${b.name} ${t.title} ${t.id}`.toLowerCase();
+                if (search && !searchStr.includes(search)) return;
+
+                const tr = document.createElement('tr');
+                const progressColor = t.percentComplete === 100 ? '#10b981' : '#3b82f6';
+
+                tr.innerHTML = `
+                    <td><strong>${p.name}</strong></td>
+                    <td>${b.name}</td>
+                    <td>${t.title}</td>
+                    <td><span class="progress-pill" style="background: ${progressColor}">${t.percentComplete}%</span></td>
+                    <td style="font-size: 0.7rem; color: #64748b; font-family: 'Fira Code', monospace;">
+                        P: ${p.id}<br>B: ${b.id}<br>T: ${t.id}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+    });
+}
+
 async function cargarResumenPlanner() {
     showLoading(true);
     const query = `
@@ -132,8 +167,10 @@ async function cargarResumenPlanner() {
             renderResumenJson(payload);
             log('Errores en GraphQL', 'error');
         } else {
+            const plans = payload.data?.plans || [];
             renderResumenJson(payload.data);
-            renderResumenArbol(payload.data?.plans || []);
+            renderResumenArbol(plans);
+            renderMasterTable(plans);
             log('Resumen sincronizado', 'success');
         }
     } catch (e) {
@@ -170,8 +207,6 @@ async function listarPlanes() {
         const res = await fetch(`${api}/plans`);
         const data = await res.json();
         currentPlans = data;
-        const filtro = document.getElementById('filtroPlan').value.toLowerCase();
-        renderTable('tablaPlanes', data, ['id', 'name'], p => p.name.toLowerCase().includes(filtro));
         populateSelects();
         log('Planes listados', 'info');
     } catch (e) { log('Error en listarPlanes: ' + e.message, 'error'); }
@@ -182,13 +217,6 @@ async function listarBuckets() {
         const res = await fetch(`${api}/buckets`);
         const data = await res.json();
         currentBuckets = data;
-        const nameFeltro = document.getElementById('filtroBucket').value.toLowerCase();
-        const planIdFeltro = document.getElementById('filtroBucketPlanId').value;
-
-        renderTable('tablaBuckets', data, ['id', 'name', 'plan_id'], b =>
-            b.name.toLowerCase().includes(nameFeltro) &&
-            (planIdFeltro === '' || String(b.plan_id) === planIdFeltro)
-        );
         populateSelects();
         log('Buckets listados', 'info');
     } catch (e) { log('Error en listarBuckets: ' + e.message, 'error'); }
@@ -199,15 +227,6 @@ async function listarTareas() {
         const res = await fetch(`${api}/tasks`);
         const data = await res.json();
         currentTasks = data;
-        const titleFeltro = document.getElementById('filtroTarea').value.toLowerCase();
-        const bucketIdFeltro = document.getElementById('filtroTareaBucketId').value;
-        const planIdFeltro = document.getElementById('filtroTareaPlanId').value;
-
-        renderTable('tablaTareas', data, ['id', 'title', 'percent_complete', 'bucket_id', 'plan_id'], t =>
-            t.title.toLowerCase().includes(titleFeltro) &&
-            (bucketIdFeltro === '' || String(t.bucket_id) === bucketIdFeltro) &&
-            (planIdFeltro === '' || String(t.plan_id) === planIdFeltro)
-        );
         populateSelects();
         log('Tareas listadas', 'info');
     } catch (e) { log('Error en listarTareas: ' + e.message, 'error'); }

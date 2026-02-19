@@ -170,74 +170,30 @@
       </section>
     </div>
 
-    <!-- Data Tables -->
+    <!-- Unified Data View -->
     <section class="card glass-card data-section">
       <div class="card-header">
-        <h2>Explorador de Datos</h2>
+        <h2>Maestro de Datos (Jerárquico)</h2>
         <div class="table-controls">
-          <button class="btn btn-small" onclick="listarPlanes()">Planes</button>
-          <button class="btn btn-small" onclick="listarBuckets()">Buckets</button>
-          <button class="btn btn-small" onclick="listarTareas()">Tareas</button>
+          <input type="text" id="masterSearch" class="filter-input" placeholder="Buscar en todo..."
+            oninput="renderMasterTable()">
+          <button class="btn btn-small" onclick="refreshAll()">🔄 Sincronizar Todo</button>
         </div>
       </div>
 
-      <div class="tables-container">
-        <div id="wrapperPlanes" class="table-wrapper">
-          <h3>Planes</h3>
-          <input type="text" id="filtroPlan" class="filter-input" placeholder="Filtrar por nombre..."
-            oninput="listarPlanes()">
-          <table id="tablaPlanes">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div id="wrapperBuckets" class="table-wrapper">
-          <h3>Buckets</h3>
-          <div class="filter-row">
-            <input type="text" id="filtroBucket" class="filter-input" placeholder="Nombre..." oninput="listarBuckets()">
-            <input type="text" id="filtroBucketPlanId" class="filter-input small" placeholder="Plan ID..."
-              oninput="listarBuckets()">
-          </div>
-          <table id="tablaBuckets">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Plan ID</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div id="wrapperTareas" class="table-wrapper scrollable">
-          <h3>Tareas</h3>
-          <div class="filter-row">
-            <input type="text" id="filtroTarea" class="filter-input" placeholder="Título..." oninput="listarTareas()">
-            <input type="text" id="filtroTareaBucketId" class="filter-input small" placeholder="B. ID..."
-              oninput="listarTareas()">
-            <input type="text" id="filtroTareaPlanId" class="filter-input small" placeholder="P. ID..."
-              oninput="listarTareas()">
-          </div>
-          <table id="tablaTareas">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>%</th>
-                <th>Bucket</th>
-                <th>Plan</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <div class="table-wrapper full-width scrollable" style="max-height: 500px;">
+        <table id="tablaMaestra">
+          <thead>
+            <tr>
+              <th>Plan</th>
+              <th>Bucket</th>
+              <th>Título de Tarea</th>
+              <th>%</th>
+              <th>IDs (Plan/Bucket/Tarea)</th>
+            </tr>
+          </thead>
+          <tbody id="masterTableBody"></tbody>
+        </table>
       </div>
     </section>
   </main>

@@ -25,8 +25,11 @@ body {
     font-family: var(--font-sans);
     background-color: var(--bg-color);
     color: var(--text-main);
-    line-height: 1.5;
-    overflow-x: hidden;
+    line-height: 1.6;
+    padding: 2rem;
+    padding-bottom: 180px;
+    /* Mas espacio para el log */
+    background-attachment: fixed;
 }
 
 .dashboard-container {
@@ -138,6 +141,16 @@ body {
     color: white;
 }
 
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.button-group .btn {
+    flex: 1;
+}
+
 .full-width {
     width: 100%;
 }
@@ -155,8 +168,8 @@ body {
     gap: 2rem;
 }
 
-/* Inputs */
-input {
+input,
+.select-input {
     width: 100%;
     padding: 0.75rem;
     background: rgba(255, 255, 255, 0.05);
@@ -165,12 +178,30 @@ input {
     color: white;
     margin-bottom: 1rem;
     font-family: inherit;
+    transition: all 0.3s ease;
 }
 
-input:focus {
+input:focus,
+.select-input:focus {
     outline: none;
     border-color: var(--primary);
     background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+}
+
+.select-input {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+}
+
+.select-input option {
+    background: #1e1e1e;
+    color: white;
 }
 
 /* Tabs */
@@ -255,13 +286,28 @@ tr:hover {
 }
 
 .console-log {
-    background: #000;
-    padding: 1rem;
-    font-family: monospace;
-    font-size: 0.75rem;
-    height: 150px;
-    overflow-y: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 140px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-top: 2px solid var(--primary);
+    color: var(--accent);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    padding: 1rem;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.console-log div {
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    padding-bottom: 2px;
 }
 
 .badge {
@@ -277,6 +323,7 @@ tr:hover {
     .management-grid {
         grid-template-columns: 1fr;
     }
+
     .split-view {
         grid-template-columns: 1fr;
     }

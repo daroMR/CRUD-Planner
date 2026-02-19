@@ -4,3 +4,6 @@ sqlalchemy
 pydantic
 psycopg2-binary
 strawberry-graphql[fastapi]
+msal
+httpx
+python-dotenv

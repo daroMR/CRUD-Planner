@@ -13,24 +13,24 @@ import models
 
 @strawberry.type
 class TaskType:
-    id: int
+    id: strawberry.ID
     title: str
     percent_complete: int
-    bucket_id: int
-    plan_id: int
+    bucket_id: strawberry.ID
+    plan_id: strawberry.ID
 
 
 @strawberry.type
 class BucketType:
-    id: int
+    id: strawberry.ID
     name: str
-    plan_id: int
+    plan_id: strawberry.ID
     tasks: List[TaskType]
 
 
 @strawberry.type
 class PlanType:
-    id: int
+    id: strawberry.ID
     name: str
     buckets: List[BucketType]
 
@@ -67,14 +67,71 @@ def _to_plan(p: models.Plan) -> PlanType:
 @strawberry.type
 class Query:
     @strawberry.field
-    def plans(self, info: Info) -> List[PlanType]:
+    async def plans(self, info: Info) -> List[PlanType]:
+        from main import graph_call
+        
+        # 1. Intentar obtener de Microsoft Graph
+        graph_data = await graph_call("GET", "/me/planner/plans")
+        if graph_data and "value" in graph_data:
+            result_plans = []
+            for p in graph_data["value"]:
+                plan_id = p["id"]
+                # Obtener buckets para este plan
+                buckets_data = await graph_call("GET", f"/planner/plans/{plan_id}/buckets")
+                plan_buckets = []
+                if buckets_data and "value" in buckets_data:
+                    for b in buckets_data["value"]:
+                        bucket_id = b["id"]
+                        # Obtener tareas para este bucket
+                        tasks_data = await graph_call("GET", f"/planner/buckets/{bucket_id}/tasks")
+                        bucket_tasks = []
+                        if tasks_data and "value" in tasks_data:
+                            for t in tasks_data["value"]:
+                                bucket_tasks.append(TaskType(
+                                    id=strawberry.ID(t["id"]),
+                                    title=t["title"],
+                                    percent_complete=t.get("percentComplete", 0),
+                                    bucket_id=strawberry.ID(bucket_id),
+                                    plan_id=strawberry.ID(plan_id)
+                                ))
+                        
+                        plan_buckets.append(BucketType(
+                            id=strawberry.ID(bucket_id),
+                            name=b["name"],
+                            plan_id=strawberry.ID(plan_id),
+                            tasks=bucket_tasks
+                        ))
+                
+                result_plans.append(PlanType(
+                    id=strawberry.ID(plan_id),
+                    name=p["title"],
+                    buckets=plan_buckets
+                ))
+            return result_plans
+
+        # 2. Fallback a Base de Datos Local
         db: Session = info.context["db"]
         plans = (
             db.query(models.Plan)
             .options(joinedload(models.Plan.buckets).joinedload(models.Bucket.tasks))
             .all()
         )
-        return [_to_plan(p) for p in plans]
+        return [PlanType(
+            id=strawberry.ID(str(p.id)),
+            name=p.name,
+            buckets=[BucketType(
+                id=strawberry.ID(str(b.id)),
+                name=b.name,
+                plan_id=strawberry.ID(str(p.id)),
+                tasks=[TaskType(
+                    id=strawberry.ID(str(t.id)),
+                    title=t.title,
+                    percent_complete=t.percent_complete,
+                    bucket_id=strawberry.ID(str(b.id)),
+                    plan_id=strawberry.ID(str(p.id))
+                ) for t in b.tasks]
+            ) for b in p.buckets]
+        ) for p in plans]
 
 
 @strawberry.type
@@ -173,7 +230,70 @@ class Mutation:
         return _to_task(db_task)
 
     @strawberry.mutation
-    def delete_task(self, info: Info, id: int) -> bool:
+    async def update_plan(self, info: Info, id: strawberry.ID, name: str) -> PlanType:
+        from main import graph_call
+        # Graph attempt
+        res = await graph_call("PATCH", f"/planner/plans/{id}", data={"title": name})
+        if res:
+            return PlanType(id=id, name=name, buckets=[])
+        
+        # Local fallback
+        db: Session = info.context["db"]
+        db_plan = db.query(models.Plan).filter(models.Plan.id == int(id) if str(id).isdigit() else 0).first()
+        if not db_plan:
+            raise ValueError("Plan not found")
+        db_plan.name = name
+        db.commit()
+        db.refresh(db_plan)
+        return PlanType(id=strawberry.ID(str(db_plan.id)), name=db_plan.name, buckets=[])
+
+    @strawberry.mutation
+    async def delete_plan(self, info: Info, id: strawberry.ID) -> bool:
+        db: Session = info.context["db"]
+        if str(id).isdigit():
+            db_plan = db.query(models.Plan).filter(models.Plan.id == int(id)).first()
+            if db_plan:
+                db.delete(db_plan)
+                db.commit()
+                return True
+        raise ValueError("Microsoft Graph no permite eliminar planes directamente. Se debe eliminar el Grupo de O365 asociado.")
+
+    @strawberry.mutation
+    async def update_bucket(self, info: Info, id: strawberry.ID, name: str) -> BucketType:
+        from main import graph_call
+        # Graph attempt
+        res = await graph_call("PATCH", f"/planner/buckets/{id}", data={"name": name})
+        if res:
+            return BucketType(id=id, name=name, plan_id=strawberry.ID(""), tasks=[])
+            
+        # Local fallback
+        db: Session = info.context["db"]
+        db_bucket = db.query(models.Bucket).filter(models.Bucket.id == int(id) if str(id).isdigit() else 0).first()
+        if not db_bucket:
+            raise ValueError("Bucket not found")
+        db_bucket.name = name
+        db.commit()
+        db.refresh(db_bucket)
+        return BucketType(id=strawberry.ID(str(db_bucket.id)), name=db_bucket.name, plan_id=strawberry.ID(str(db_bucket.plan_id)), tasks=[])
+
+    @strawberry.mutation
+    async def delete_bucket(self, info: Info, id: strawberry.ID) -> bool:
+        from main import graph_call
+        res = await graph_call("DELETE", f"/planner/buckets/{id}")
+        if res is not None:
+            return True
+            
+        db: Session = info.context["db"]
+        if str(id).isdigit():
+            db_bucket = db.query(models.Bucket).filter(models.Bucket.id == int(id)).first()
+            if db_bucket:
+                db.delete(db_bucket)
+                db.commit()
+                return True
+        return False
+
+    @strawberry.mutation
+    def delete_task(self, info: Info, id: strawberry.ID) -> bool:
         db: Session = info.context["db"]
         db_task = db.query(models.Task).filter(models.Task.id == id).first()
         if not db_task:

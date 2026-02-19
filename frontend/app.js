@@ -2,8 +2,12 @@
 const api = 'http://localhost:8000';
 
 // -----------------------------
-// Logging & UI State
+// Logging, UI State & Global Data
 // -----------------------------
+
+let currentPlans = [];
+let currentBuckets = [];
+let currentTasks = [];
 
 function log(msg, type = 'info') {
     const logDiv = document.getElementById('log');
@@ -91,6 +95,14 @@ function renderResumenArbol(plans) {
     root.appendChild(ul);
 }
 
+async function refreshAll() {
+    log('Actualizando todos los datos...', 'info');
+    await cargarResumenPlanner();
+    await listarPlanes();
+    await listarBuckets();
+    await listarTareas();
+}
+
 async function cargarResumenPlanner() {
     showLoading(true);
     const query = `
@@ -122,7 +134,7 @@ async function cargarResumenPlanner() {
         } else {
             renderResumenJson(payload.data);
             renderResumenArbol(payload.data?.plans || []);
-            log('Datos sincronizados correctamente', 'success');
+            log('Resumen sincronizado', 'success');
         }
     } catch (e) {
         log('Fallo al cargar resumen: ' + e.message, 'error');
@@ -139,9 +151,9 @@ function renderTable(tableId, data, columns, filterFn) {
     const tbody = document.querySelector(`#${tableId} tbody`);
     if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     const filteredData = filterFn ? data.filter(filterFn) : data;
-    
+
     filteredData.forEach(item => {
         const tr = document.createElement('tr');
         columns.forEach(col => {
@@ -157,42 +169,137 @@ async function listarPlanes() {
     try {
         const res = await fetch(`${api}/plans`);
         const data = await res.json();
+        currentPlans = data;
         const filtro = document.getElementById('filtroPlan').value.toLowerCase();
         renderTable('tablaPlanes', data, ['id', 'name'], p => p.name.toLowerCase().includes(filtro));
+        populateSelects();
         log('Planes listados', 'info');
-    } catch (e) { log('Error al listar planes', 'error'); }
+    } catch (e) { log('Error en listarPlanes: ' + e.message, 'error'); }
 }
 
 async function listarBuckets() {
     try {
         const res = await fetch(`${api}/buckets`);
         const data = await res.json();
+        currentBuckets = data;
         const nameFeltro = document.getElementById('filtroBucket').value.toLowerCase();
         const planIdFeltro = document.getElementById('filtroBucketPlanId').value;
-        
-        renderTable('tablaBuckets', data, ['id', 'name', 'plan_id'], b => 
-            b.name.toLowerCase().includes(nameFeltro) && 
-            (planIdFeltro === '' || b.plan_id === parseInt(planIdFeltro))
+
+        renderTable('tablaBuckets', data, ['id', 'name', 'plan_id'], b =>
+            b.name.toLowerCase().includes(nameFeltro) &&
+            (planIdFeltro === '' || String(b.plan_id) === planIdFeltro)
         );
+        populateSelects();
         log('Buckets listados', 'info');
-    } catch (e) { log('Error al listar buckets', 'error'); }
+    } catch (e) { log('Error en listarBuckets: ' + e.message, 'error'); }
 }
 
 async function listarTareas() {
     try {
         const res = await fetch(`${api}/tasks`);
         const data = await res.json();
+        currentTasks = data;
         const titleFeltro = document.getElementById('filtroTarea').value.toLowerCase();
         const bucketIdFeltro = document.getElementById('filtroTareaBucketId').value;
         const planIdFeltro = document.getElementById('filtroTareaPlanId').value;
 
-        renderTable('tablaTareas', data, ['id', 'title', 'percent_complete', 'bucket_id', 'plan_id'], t => 
+        renderTable('tablaTareas', data, ['id', 'title', 'percent_complete', 'bucket_id', 'plan_id'], t =>
             t.title.toLowerCase().includes(titleFeltro) &&
-            (bucketIdFeltro === '' || t.bucket_id === parseInt(bucketIdFeltro)) &&
-            (planIdFeltro === '' || t.plan_id === parseInt(planIdFeltro))
+            (bucketIdFeltro === '' || String(t.bucket_id) === bucketIdFeltro) &&
+            (planIdFeltro === '' || String(t.plan_id) === planIdFeltro)
         );
+        populateSelects();
         log('Tareas listadas', 'info');
-    } catch (e) { log('Error al listar tareas', 'error'); }
+    } catch (e) { log('Error en listarTareas: ' + e.message, 'error'); }
+}
+
+// -----------------------------
+// UI Helper Functions
+// -----------------------------
+
+function populateSelects() {
+    fillSelect('managePlanId', currentPlans, 'id', 'name', 'Seleccionar Plan...');
+    fillSelect('bucketPlanId', currentPlans, 'id', 'name', 'Seleccionar Plan...');
+    fillSelect('taskPlanId', currentPlans, 'id', 'name', 'Seleccionar Plan...');
+    fillSelect('manageBucketPlanId', currentPlans, 'id', 'name', 'Plan Asociado...');
+    fillSelect('updateTaskPlanId', currentPlans, 'id', 'name', 'Plan...');
+
+    fillSelect('manageBucketId', currentBuckets, 'id', 'name', 'Seleccionar Bucket...');
+    fillSelect('updateTaskId', currentTasks, 'id', 'title', 'Seleccionar Tarea...');
+    fillSelect('deleteTaskId', currentTasks, 'id', 'title', 'Seleccionar Tarea...');
+}
+
+function fillSelect(elemId, data, valKey, textKey, defaultText) {
+    const sel = document.getElementById(elemId);
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = `<option value="">${defaultText}</option>`;
+    data.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item[valKey];
+        opt.textContent = `${item[textKey]} (${item[valKey]})`;
+        sel.appendChild(opt);
+    });
+    if (data.some(d => String(d[valKey]) === currentVal)) sel.value = currentVal;
+}
+
+function fillPlanData() {
+    const id = document.getElementById('managePlanId').value;
+    const plan = currentPlans.find(p => String(p.id) === id);
+    if (plan) {
+        document.getElementById('managePlanName').value = plan.name;
+    }
+}
+
+function fillBucketData() {
+    const id = document.getElementById('manageBucketId').value;
+    const bucket = currentBuckets.find(b => String(b.id) === id);
+    if (bucket) {
+        document.getElementById('manageBucketName').value = bucket.name;
+        document.getElementById('manageBucketPlanId').value = bucket.plan_id;
+    }
+}
+
+function fillTaskData() {
+    const id = document.getElementById('updateTaskId').value;
+    const task = currentTasks.find(t => String(t.id) === id);
+    if (task) {
+        document.getElementById('updateTaskTitle').value = task.title;
+        document.getElementById('updateTaskPercent').value = task.percent_complete;
+        document.getElementById('updateTaskPlanId').value = task.plan_id;
+        updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId');
+        document.getElementById('updateTaskBucketId').value = task.bucket_id;
+    }
+}
+
+function updateBucketSelect(planSelId, bucketSelId) {
+    const planId = document.getElementById(planSelId).value;
+    const filteredBuckets = currentBuckets.filter(b => !planId || String(b.plan_id) === planId);
+    fillSelect(bucketSelId, filteredBuckets, 'id', 'name', 'Seleccionar Bucket...');
+}
+
+async function apiDelete(endpoint) {
+    const res = await fetch(`${api}${endpoint}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Fallo en DELETE');
+    }
+    return res.json();
+}
+
+async function apiPut(endpoint, body) {
+    const res = await fetch(`${api}${endpoint}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Fallo en PUT');
+    }
+    return res.json();
 }
 
 async function apiPost(endpoint, body) {
@@ -209,10 +316,34 @@ async function crearPlan() {
     const name = document.getElementById('planName');
     const id = document.getElementById('planId');
     if (!name.value || !id.value) return log('Nombre e ID son obligatorios', 'error');
-    
+
     try {
-        await apiPost('/plans', { id: parseInt(id.value), name: name.value });
+        await apiPost('/plans', { id: id.value, name: name.value });
         log(`Plan "${name.value}" creado`, 'success');
+        listarPlanes();
+    } catch (e) { log('Error: ' + e.message, 'error'); }
+}
+
+async function actualizarPlan() {
+    const id = document.getElementById('managePlanId').value;
+    const name = document.getElementById('managePlanName').value;
+    if (!id || !name) return log('ID y Nombre son obligatorios', 'error');
+
+    try {
+        await apiPut(`/plans/${id}`, { name });
+        log(`Plan ${id} actualizado`, 'success');
+        listarPlanes();
+    } catch (e) { log('Error: ' + e.message, 'error'); }
+}
+
+async function eliminarPlan() {
+    const id = document.getElementById('managePlanId').value;
+    if (!id) return log('ID es obligatorio', 'error');
+    if (!confirm('¿Estás seguro de eliminar este plan (Local)? Nota: Microsoft Graph no permite borrar planes directamente.')) return;
+
+    try {
+        await apiDelete(`/plans/${id}`);
+        log(`Plan ${id} eliminado`, 'success');
         listarPlanes();
     } catch (e) { log('Error: ' + e.message, 'error'); }
 }
@@ -224,8 +355,33 @@ async function crearBucket() {
     if (!name.value || !id.value || !planId.value) return log('Faltan campos obligatorios', 'error');
 
     try {
-        await apiPost('/buckets', { id: parseInt(id.value), name: name.value, plan_id: parseInt(planId.value) });
+        await apiPost('/buckets', { id: id.value, name: name.value, plan_id: planId.value });
         log(`Bucket "${name.value}" creado`, 'success');
+        listarBuckets();
+    } catch (e) { log('Error: ' + e.message, 'error'); }
+}
+
+async function actualizarBucket() {
+    const id = document.getElementById('manageBucketId').value;
+    const name = document.getElementById('manageBucketName').value;
+    const planId = document.getElementById('manageBucketPlanId').value;
+    if (!id || !name) return log('ID y Nombre son obligatorios', 'error');
+
+    try {
+        await apiPut(`/buckets/${id}`, { name, plan_id: planId || "" });
+        log(`Bucket ${id} actualizado`, 'success');
+        listarBuckets();
+    } catch (e) { log('Error: ' + e.message, 'error'); }
+}
+
+async function eliminarBucket() {
+    const id = document.getElementById('manageBucketId').value;
+    if (!id) return log('ID es obligatorio', 'error');
+    if (!confirm('¿Estás seguro de eliminar este bucket?')) return;
+
+    try {
+        await apiDelete(`/buckets/${id}`);
+        log(`Bucket ${id} eliminado`, 'success');
         listarBuckets();
     } catch (e) { log('Error: ' + e.message, 'error'); }
 }
@@ -239,11 +395,11 @@ async function crearTarea() {
 
     try {
         await apiPost('/tasks', {
-            id: parseInt(id.value),
+            id: id.value,
             title: title.value,
-            bucket_id: parseInt(bId.value),
-            plan_id: parseInt(pId.value),
-            percent_complete: parseInt(pc.value)
+            bucket_id: bId.value,
+            plan_id: pId.value,
+            percent_complete: parseInt(pc.value) || 0
         });
         log(`Tarea "${title.value}" creada`, 'success');
         listarTareas();
@@ -278,7 +434,7 @@ async function actualizarTarea() {
 async function eliminarTarea() {
     const id = document.getElementById('deleteTaskId').value;
     if (!id) return log('ID de tarea requerido', 'error');
-    
+
     try {
         const res = await fetch(`${api}/tasks/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error(await res.text());
@@ -287,10 +443,93 @@ async function eliminarTarea() {
     } catch (e) { log('Error: ' + e.message, 'error'); }
 }
 
-window.onload = () => {
-    cargarResumenPlanner();
-    listarPlanes();
-    listarBuckets();
-    listarTareas();
-    log('Dashboard inicializado', 'info');
+// -----------------------------
+// Autenticación (MS Graph)
+// -----------------------------
+
+async function verificarAuth() {
+    try {
+        const res = await fetch(`${api}/auth/status`);
+        const data = await res.json();
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userName = document.getElementById('userName');
+
+        if (data.authenticated) {
+            loginBtn.style.display = 'none';
+            userInfo.style.display = 'block';
+            userName.textContent = data.user || 'Planner Conectado';
+            log('Sesión activa en Microsoft Graph', 'success');
+            return true;
+        } else {
+            loginBtn.style.display = 'block';
+            userInfo.style.display = 'none';
+            return false;
+        }
+    } catch (e) {
+        console.error('Error verificando auth', e);
+        return false;
+    }
+}
+
+async function iniciarSesion() {
+    try {
+        log('Iniciando flujo de autenticación...', 'info');
+        const res = await fetch(`${api}/auth/login`);
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Fallo al iniciar sesión');
+        }
+        const flow = await res.json();
+
+        if (!flow || !flow.user_code) {
+            throw new Error('No se recibió código de autenticación');
+        }
+
+        // Mostrar Modal
+        document.getElementById('authCode').textContent = flow.user_code;
+        document.getElementById('authUrl').href = flow.verification_uri || '#';
+        document.getElementById('authModal').style.display = 'block';
+        document.getElementById('modalOverlay').style.display = 'block';
+
+        // Poll para completar
+        const pollInterval = setInterval(async () => {
+            try {
+                const completeRes = await fetch(`${api}/auth/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(flow)
+                });
+                const result = await completeRes.json();
+
+                if (result.status === 'success') {
+                    clearInterval(pollInterval);
+                    document.getElementById('authModal').style.display = 'none';
+                    document.getElementById('modalOverlay').style.display = 'none';
+                    log(`Bienvenido, ${result.user}!`, 'success');
+                    verificarAuth();
+                    refreshAll();
+                } else if (result.status === 'error' && result.detail !== 'authorization_pending') {
+                    clearInterval(pollInterval);
+                    log('Error en autenticación: ' + result.detail, 'error');
+                }
+            } catch (e) {
+                console.error('Error polling auth', e);
+            }
+        }, 5000);
+
+    } catch (e) {
+        log('Error al iniciar sesión: ' + e.message, 'error');
+    }
+}
+
+window.onload = async () => {
+    log('Dashboard inicializando...', 'info');
+    const autenticado = await verificarAuth();
+    await refreshAll();
+    if (autenticado) {
+        log('Conexión con Planner establecida', 'success');
+    } else {
+        log('Modo local (Sin conexión a Microsoft)', 'info');
+    }
 };

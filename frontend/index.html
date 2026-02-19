@@ -17,9 +17,9 @@
 <body class="dark-theme">
   <header class="main-header">
     <div class="header-content">
-      <h1 class="logo">Planner<span>PRO</span></h1>
+      <h1 class="logo">Optisa Planner</h1>
       <nav class="main-nav">
-        <button class="btn btn-primary" onclick="cargarResumenPlanner()">
+        <button class="btn btn-primary" onclick="refreshAll()">
           <span class="icon">🔄</span> Recargar Resumen
         </button>
       </nav>
@@ -30,6 +30,14 @@
     <!-- Resumen Section -->
     <section class="card glass-card resumen-section">
       <div class="card-header">
+        <div class="user-profile">
+          <button id="loginBtn" class="btn btn-primary" onclick="iniciarSesion()">
+            <span class="icon">🔑</span> Conectar Planner
+          </button>
+          <div id="userInfo" style="display: none;">
+            <span id="userName" class="badge">Usuario</span>
+          </div>
+        </div>
         <h2>Resumen General</h2>
         <span class="badge">GraphQL</span>
       </div>
@@ -63,7 +71,7 @@
           <div id="tab-plans" class="tab-content active">
             <div class="input-group">
               <input type="text" id="planName" placeholder="Nombre del Plan">
-              <input type="number" id="planId" placeholder="ID (Numérico)">
+              <input type="text" id="planId" placeholder="ID (Manual, opcional)">
               <button class="btn btn-action" onclick="crearPlan()">Crear Plan</button>
             </div>
           </div>
@@ -71,8 +79,10 @@
           <div id="tab-buckets" class="tab-content">
             <div class="input-group">
               <input type="text" id="bucketName" placeholder="Nombre Bucket">
-              <input type="number" id="bucketId" placeholder="ID">
-              <input type="number" id="bucketPlanId" placeholder="Plan ID">
+              <input type="text" id="bucketId" placeholder="ID (Opcional)">
+              <select id="bucketPlanId" class="select-input">
+                <option value="">Seleccionar Plan...</option>
+              </select>
               <button class="btn btn-action" onclick="crearBucket()">Crear Bucket</button>
             </div>
           </div>
@@ -80,9 +90,13 @@
           <div id="tab-tasks" class="tab-content">
             <div class="input-group">
               <input type="text" id="taskTitle" placeholder="Título Tarea">
-              <input type="number" id="taskId" placeholder="ID">
-              <input type="number" id="taskBucketId" placeholder="Bucket ID">
-              <input type="number" id="taskPlanId" placeholder="Plan ID">
+              <input type="text" id="taskId" placeholder="ID (Opcional)">
+              <select id="taskPlanId" class="select-input" onchange="updateBucketSelect('taskPlanId', 'taskBucketId')">
+                <option value="">Seleccionar Plan...</option>
+              </select>
+              <select id="taskBucketId" class="select-input">
+                <option value="">Seleccionar Bucket...</option>
+              </select>
               <input type="number" id="taskPercent" placeholder="% Completado" value="0">
               <button class="btn btn-action" onclick="crearTarea()">Crear Tarea</button>
             </div>
@@ -97,19 +111,59 @@
         </div>
         <div class="action-grid">
           <div class="action-item">
+            <h3>Gestión de Planes</h3>
+            <div class="row">
+              <select id="managePlanId" class="select-input full-width" onchange="fillPlanData()">
+                <option value="">Seleccionar Plan...</option>
+              </select>
+              <input type="text" id="managePlanName" placeholder="Nuevo Nombre">
+            </div>
+            <div class="button-group">
+              <button class="btn btn-secondary" onclick="actualizarPlan()">Actualizar</button>
+              <button class="btn btn-danger" onclick="eliminarPlan()">Eliminar</button>
+            </div>
+          </div>
+
+          <div class="action-item">
+            <h3>Gestión de Buckets</h3>
+            <div class="row">
+              <select id="manageBucketId" class="select-input full-width" onchange="fillBucketData()">
+                <option value="">Seleccionar Bucket...</option>
+              </select>
+              <input type="text" id="manageBucketName" placeholder="Nuevo Nombre">
+            </div>
+            <select id="manageBucketPlanId" class="select-input full-width">
+              <option value="">Plan Asociado (Opcional)...</option>
+            </select>
+            <div class="button-group">
+              <button class="btn btn-secondary" onclick="actualizarBucket()">Actualizar</button>
+              <button class="btn btn-danger" onclick="eliminarBucket()">Eliminar</button>
+            </div>
+          </div>
+
+          <div class="action-item">
             <h3>Actualizar Tarea</h3>
-            <input type="number" id="updateTaskId" placeholder="ID Tarea">
+            <select id="updateTaskId" class="select-input full-width" onchange="fillTaskData()">
+              <option value="">Seleccionar Tarea...</option>
+            </select>
             <input type="text" id="updateTaskTitle" placeholder="Nuevo Título">
             <input type="number" id="updateTaskPercent" placeholder="%">
             <div class="row">
-              <input type="number" id="updateTaskBucketId" placeholder="B. ID">
-              <input type="number" id="updateTaskPlanId" placeholder="P. ID">
+              <select id="updateTaskPlanId" class="select-input"
+                onchange="updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId')">
+                <option value="">Plan...</option>
+              </select>
+              <select id="updateTaskBucketId" class="select-input">
+                <option value="">Bucket...</option>
+              </select>
             </div>
             <button class="btn btn-secondary full-width" onclick="actualizarTarea()">Actualizar</button>
           </div>
           <div class="action-item">
             <h3>Eliminar Tarea</h3>
-            <input type="number" id="deleteTaskId" placeholder="ID Tarea">
+            <select id="deleteTaskId" class="select-input full-width">
+              <option value="">Seleccionar Tarea...</option>
+            </select>
             <button class="btn btn-danger full-width" onclick="eliminarTarea()">Eliminar</button>
           </div>
         </div>
@@ -147,7 +201,7 @@
           <h3>Buckets</h3>
           <div class="filter-row">
             <input type="text" id="filtroBucket" class="filter-input" placeholder="Nombre..." oninput="listarBuckets()">
-            <input type="number" id="filtroBucketPlanId" class="filter-input small" placeholder="Plan ID..."
+            <input type="text" id="filtroBucketPlanId" class="filter-input small" placeholder="Plan ID..."
               oninput="listarBuckets()">
           </div>
           <table id="tablaBuckets">
@@ -166,9 +220,9 @@
           <h3>Tareas</h3>
           <div class="filter-row">
             <input type="text" id="filtroTarea" class="filter-input" placeholder="Título..." oninput="listarTareas()">
-            <input type="number" id="filtroTareaBucketId" class="filter-input small" placeholder="B. ID..."
+            <input type="text" id="filtroTareaBucketId" class="filter-input small" placeholder="B. ID..."
               oninput="listarTareas()">
-            <input type="number" id="filtroTareaPlanId" class="filter-input small" placeholder="P. ID..."
+            <input type="text" id="filtroTareaPlanId" class="filter-input small" placeholder="P. ID..."
               oninput="listarTareas()">
           </div>
           <table id="tablaTareas">
@@ -191,6 +245,27 @@
   <footer class="main-footer">
     <div id="log" class="console-log"></div>
   </footer>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="glass-card"
+    style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; padding: 2rem; max-width: 400px; width: 90%;">
+    <div class="card-header">
+      <h2>Autenticación Microsoft</h2>
+    </div>
+    <div style="text-align: center;">
+      <p>Para conectar tu Planner, por favor visita:</p>
+      <a id="authUrl" href="#" target="_blank"
+        style="color: var(--primary); font-weight: bold; margin: 1rem 0; display: block;">microsoft.com/devicelogin</a>
+      <p>E introduce el siguiente código:</p>
+      <div id="authCode"
+        style="font-size: 2rem; font-weight: 800; letter-spacing: 0.2em; margin: 1.5rem 0; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 8px;">
+        XXXX-XXXX</div>
+      <p id="authStatusMsg" style="color: var(--text-muted); font-size: 0.8rem;">Esperando inicio de sesión...</p>
+    </div>
+  </div>
+  <div id="modalOverlay"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;">
+  </div>
 
   <script src="app.js"></script>
   <script>

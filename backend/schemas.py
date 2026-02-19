@@ -8,29 +8,29 @@ class PlanCreate(PlanBase):
     pass
 
 class Plan(PlanBase):
-    id: int
+    id: str
     model_config = ConfigDict(from_attributes=True)
 
 class BucketBase(BaseModel):
     name: str
-    plan_id: int
+    plan_id: str
 
 class BucketCreate(BucketBase):
     pass
 
 class Bucket(BucketBase):
-    id: int
+    id: str
     model_config = ConfigDict(from_attributes=True)
 
 class TaskBase(BaseModel):
     title: str
     percent_complete: Optional[int] = 0
-    bucket_id: int
-    plan_id: int
+    bucket_id: str
+    plan_id: str
 
 class TaskCreate(TaskBase):
     pass
 
 class Task(TaskBase):
-    id: int
+    id: str
     model_config = ConfigDict(from_attributes=True)

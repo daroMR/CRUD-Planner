@@ -16,10 +16,11 @@ Public Sub FetchAll()
     
     ' Encabezados
     ws.Cells(1, 1).Value = "Plan Name"
-    ws.Cells(1, 2).Value = "Task ID"
-    ws.Cells(1, 3).Value = "Title"
-    ws.Cells(1, 4).Value = "Percent Complete"
-    ws.Cells(1, 5).Value = "ETag"
+    ws.Cells(1, 2).Value = "Bucket ID"
+    ws.Cells(1, 3).Value = "Task ID"
+    ws.Cells(1, 4).Value = "Title"
+    ws.Cells(1, 5).Value = "Percent Complete"
+    ws.Cells(1, 6).Value = "ETag"
     
     Dim row As Long: row = 2
     Dim plan As Object
@@ -35,10 +36,11 @@ Public Sub FetchAll()
             Dim task As Object
             For Each task In jsonTasks("value")
                 ws.Cells(row, 1).Value = planTitle
-                ws.Cells(row, 2).Value = task("id")
-                ws.Cells(row, 3).Value = task("title")
-                ws.Cells(row, 4).Value = task("percentComplete")
-                ws.Cells(row, 5).Value = task("@odata.etag")
+                ws.Cells(row, 2).Value = task("bucketId")
+                ws.Cells(row, 3).Value = task("id")
+                ws.Cells(row, 4).Value = task("title")
+                ws.Cells(row, 5).Value = task("percentComplete")
+                ws.Cells(row, 6).Value = task("@odata.etag")
                 row = row + 1
             Next
         End If
@@ -71,10 +73,10 @@ Public Sub PushChanges()
     Dim count As Integer: count = 0
     
     For i = 2 To lastRow
-        Dim taskId As String: taskId = ws.Cells(i, 2).Value
-        Dim title As String: title = ws.Cells(i, 3).Value
-        Dim percent As Long: percent = ws.Cells(i, 4).Value
-        Dim eTag As String: eTag = ws.Cells(i, 5).Value
+        Dim taskId As String: taskId = ws.Cells(i, 3).Value
+        Dim title As String: title = ws.Cells(i, 4).Value
+        Dim percent As Long: percent = ws.Cells(i, 5).Value
+        Dim eTag As String: eTag = ws.Cells(i, 6).Value
         
         ' Crear el cuerpo del JSON para el PATCH
         Dim body As String
@@ -86,7 +88,7 @@ Public Sub PushChanges()
         
         If Not result Is Nothing Then
             ' Actualizar el ETag local con el nuevo devuelto por el servidor
-            ws.Cells(i, 5).Value = result("@odata.etag")
+            ws.Cells(i, 6).Value = result("@odata.etag")
             count = count + 1
         End If
     Next

@@ -61,7 +61,7 @@ function switchSlide(slideId) {
             'slide-dashboard': 'Resumen Ejecutivo',
             'slide-admin': 'Gestión de Proyectos',
             'slide-master': 'Maestro de Datos',
-            'slide-info': 'Centro de Documentación'
+            'slide-info': 'Galería de Diagramas Master'
         };
         document.getElementById('current-slide-title').innerText = titleMap[slideId] || 'Panel';
 

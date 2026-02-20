@@ -11,7 +11,18 @@ import httpx
 from strawberry.fastapi import GraphQLRouter
 from graphql_schema import schema, get_context
 
-app = FastAPI()
+app = FastAPI(title="CRUD-Planner API", version="2.0.0")
+
+@app.get("/")
+def root():
+    return {
+        "app": "CRUD-Planner API",
+        "version": "2.0",
+        "docs": "/docs",
+        "graphql": "/graphql",
+        "auth": "/auth/status",
+        "status": "online"
+    }
 
 # Permitir CORS para pruebas locales
 app.add_middleware(

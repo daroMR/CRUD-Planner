@@ -31,6 +31,9 @@
       <div class="nav-item" onclick="switchSlide('slide-master')" id="nav-master">
         <span class="icon">📜</span> Maestro
       </div>
+      <div class="nav-item" onclick="switchSlide('slide-info')" id="nav-info">
+        <span class="icon">📖</span> Documentación
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -272,6 +275,57 @@
               </thead>
               <tbody id="masterTableBody"></tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 4: Documentación (Info & Docs) -->
+      <section id="slide-info" class="slide">
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="card">
+            <div class="card-header">
+              <h2>📐 Arquitectura (Pilares)</h2>
+              <span class="badge">Docs</span>
+            </div>
+            <div class="input-group" style="gap: 1rem;">
+              <a href="/docs/pilar1-ecosistema.md" target="_blank" class="nav-item">
+                <span class="icon">🏗️</span> Pilar 1: Ecosistema Técnico
+              </a>
+              <a href="/docs/pilar2-flujo-datos.md" target="_blank" class="nav-item">
+                <span class="icon">🔄</span> Pilar 2: Flujo de Datos & Sync
+              </a>
+              <a href="/docs/pilar3-api-contratos.md" target="_blank" class="nav-item">
+                <span class="icon">🔌</span> Pilar 3: API & Contratos
+              </a>
+              <a href="/docs/pilar4-adr.md" target="_blank" class="nav-item">
+                <span class="icon">⚖️</span> Pilar 4: Decisiones (ADR)
+              </a>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>🚀 Estrategia (Info)</h2>
+              <span class="badge">Master</span>
+            </div>
+            <div class="input-group" style="gap: 1rem;">
+              <a href="/info/onboarding.md" target="_blank" class="nav-item">
+                <span class="icon">✈️</span> Onboarding Estratégico
+              </a>
+              <a href="/info/golden-thread.svg" target="_blank" class="nav-item">
+                <span class="icon">🧵</span> The Golden Thread (SVG Map)
+              </a>
+              <a href="/info/blueprint.d2" target="_blank" class="nav-item">
+                <span class="icon">🏛️</span> Master Blueprint (D2)
+              </a>
+              <div
+                style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center;">
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Visualización Rápida:
+                </p>
+                <img src="/info/golden-thread2.png"
+                  style="width: 100%; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+              </div>
+            </div>
           </div>
         </div>
       </section>

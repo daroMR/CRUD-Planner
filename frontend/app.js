@@ -60,7 +60,8 @@ function switchSlide(slideId) {
         const titleMap = {
             'slide-dashboard': 'Resumen Ejecutivo',
             'slide-admin': 'Gestión de Proyectos',
-            'slide-master': 'Maestro de Datos'
+            'slide-master': 'Maestro de Datos',
+            'slide-info': 'Centro de Documentación'
         };
         document.getElementById('current-slide-title').innerText = titleMap[slideId] || 'Panel';
 

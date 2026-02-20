@@ -39,9 +39,17 @@ def root():
     return RedirectResponse(url="/app/index.html")
 
 # Servir el frontend estático desde /app
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+base_path = os.path.dirname(os.path.dirname(__file__))
+frontend_path = os.path.join(base_path, "frontend")
+info_path = os.path.join(base_path, "info")
+docs_path = os.path.join(base_path, "docs")
+
 if os.path.exists(frontend_path):
     app.mount("/app", StaticFiles(directory=frontend_path), name="frontend")
+if os.path.exists(info_path):
+    app.mount("/info", StaticFiles(directory=info_path), name="info")
+if os.path.exists(docs_path):
+    app.mount("/docs", StaticFiles(directory=docs_path), name="docs")
 
 # Permitir CORS para pruebas locales
 app.add_middleware(

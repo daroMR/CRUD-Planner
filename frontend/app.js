@@ -328,31 +328,49 @@ function fillSelect(elemId, data, valKey, textKey, defaultText) {
 }
 
 function fillPlanData() {
-    const id = document.getElementById('managePlanId').value;
+    const sel = document.getElementById('managePlanId');
+    const input = document.getElementById('managePlanName');
+    if (!sel || !input) return;
+
+    const id = sel.value;
     const plan = currentPlans.find(p => String(p.id) === id);
     if (plan) {
-        document.getElementById('managePlanName').value = plan.name;
+        input.value = plan.name;
     }
 }
 
 function fillBucketData() {
-    const id = document.getElementById('manageBucketId').value;
+    const sel = document.getElementById('manageBucketId');
+    const inputName = document.getElementById('manageBucketName');
+    const selPlan = document.getElementById('manageBucketPlanId');
+    if (!sel || !inputName || !selPlan) return;
+
+    const id = sel.value;
     const bucket = currentBuckets.find(b => String(b.id) === id);
     if (bucket) {
-        document.getElementById('manageBucketName').value = bucket.name;
-        document.getElementById('manageBucketPlanId').value = bucket.plan_id;
+        inputName.value = bucket.name;
+        selPlan.value = bucket.plan_id;
     }
 }
 
 function fillTaskData() {
-    const id = document.getElementById('updateTaskId').value;
+    const sel = document.getElementById('updateTaskId');
+    if (!sel) return;
+    const id = sel.value;
     const task = currentTasks.find(t => String(t.id) === id);
     if (task) {
-        document.getElementById('updateTaskTitle').value = task.title;
-        document.getElementById('updateTaskPercent').value = task.percent_complete;
-        document.getElementById('updateTaskPlanId').value = task.plan_id;
-        updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId');
-        document.getElementById('updateTaskBucketId').value = task.bucket_id;
+        const titleInput = document.getElementById('updateTaskTitle');
+        const percentInput = document.getElementById('updateTaskPercent');
+        const planSel = document.getElementById('updateTaskPlanId');
+        const bucketSel = document.getElementById('updateTaskBucketId');
+
+        if (titleInput) titleInput.value = task.title;
+        if (percentInput) percentInput.value = task.percent_complete;
+        if (planSel) {
+            planSel.value = task.plan_id;
+            updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId');
+            if (bucketSel) bucketSel.value = task.bucket_id;
+        }
     }
 }
 
@@ -397,15 +415,20 @@ async function apiPost(endpoint, body) {
 }
 
 async function crearPlan() {
-    const name = document.getElementById('planName');
-    const id = document.getElementById('planId');
-    if (!name.value || !id.value) return log('Nombre e ID son obligatorios', 'error');
+    const nameInput = document.getElementById('planName');
+    const idInput = document.getElementById('planId');
+    if (!nameInput || !idInput) return;
+
+    if (!nameInput.value || !idInput.value) {
+        return log('⚠️ Se requiere Nombre e ID para el nuevo Plan local', 'error');
+    }
 
     try {
-        await apiPost('/plans', { id: id.value, name: name.value });
-        log(`Plan "${name.value}" creado`, 'success');
-        listarPlanes();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`⏳ Creando Plan "${nameInput.value}"...`, 'info');
+        await apiPost('/plans', { id: idInput.value, name: nameInput.value });
+        log(`✅ Plan "${nameInput.value}" creado con éxito`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function actualizarPlan() {
@@ -434,107 +457,120 @@ async function eliminarPlan() {
 }
 
 async function crearBucket() {
-    const name = document.getElementById('bucketName');
-    const id = document.getElementById('bucketId');
-    const planId = document.getElementById('bucketPlanId');
-    if (!name.value || !id.value || !planId.value) return log('Faltan campos obligatorios', 'error');
+    const nameInput = document.getElementById('bucketName');
+    const idInput = document.getElementById('bucketId');
+    const planSel = document.getElementById('bucketPlanId');
+    if (!nameInput || !planSel) return;
+
+    if (!nameInput.value || !planSel.value) {
+        return log('⚠️ Se requiere Nombre y Plan Destino para el Bucket', 'error');
+    }
 
     try {
-        await apiPost('/buckets', { id: id.value, name: name.value, plan_id: planId.value });
-        log(`Bucket "${name.value}" creado`, 'success');
-        listarBuckets();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`⏳ Creando Bucket "${nameInput.value}"...`, 'info');
+        await apiPost('/buckets', { id: idInput?.value || "", name: nameInput.value, plan_id: planSel.value });
+        log(`✅ Bucket "${nameInput.value}" creado`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function actualizarBucket() {
-    const id = document.getElementById('manageBucketId').value;
-    const name = document.getElementById('manageBucketName').value;
-    const planId = document.getElementById('manageBucketPlanId').value;
-    if (!id || !name) return log('ID y Nombre son obligatorios', 'error');
+    const idSel = document.getElementById('manageBucketId');
+    const nameInput = document.getElementById('manageBucketName');
+    const planSel = document.getElementById('manageBucketPlanId');
+    if (!idSel || !nameInput || !planSel) return;
+
+    const id = idSel.value;
+    const name = nameInput.value;
+    const planId = planSel.value;
+    if (!id || !name) return log('⚠️ Selecciona un Bucket e ingresa un Nombre', 'error');
 
     try {
+        log(`⏳ Actualizando Bucket ${id}...`, 'info');
         await apiPut(`/buckets/${id}`, { name, plan_id: planId || "" });
-        log(`Bucket ${id} actualizado`, 'success');
-        listarBuckets();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`✅ Bucket ${id} actualizado`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function eliminarBucket() {
-    const id = document.getElementById('manageBucketId').value;
-    if (!id) return log('ID es obligatorio', 'error');
+    const idSel = document.getElementById('manageBucketId');
+    if (!idSel) return;
+    const id = idSel.value;
+    if (!id) return log('⚠️ Selecciona un Bucket para eliminar', 'error');
     if (!confirm('¿Estás seguro de eliminar este bucket?')) return;
 
     try {
+        log(`🗑️ Eliminando Bucket ${id}...`, 'info');
         await apiDelete(`/buckets/${id}`);
-        log(`Bucket ${id} eliminado`, 'success');
-        listarBuckets();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`✅ Bucket ${id} eliminado`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function crearTarea() {
-    const title = document.getElementById('taskTitle');
-    const id = document.getElementById('taskId');
-    const bId = document.getElementById('taskBucketId');
-    const pId = document.getElementById('taskPlanId');
-    const pc = document.getElementById('taskPercent');
+    const titleInp = document.getElementById('taskTitle');
+    const bSel = document.getElementById('taskBucketId');
+    const pSel = document.getElementById('taskPlanId');
+    const pcInp = document.getElementById('taskPercent');
+    if (!titleInp || !bSel || !pSel) return;
+
+    if (!titleInp.value || !bSel.value || !pSel.value) {
+        return log('⚠️ Se requiere Título, Plan y Bucket para crear la tarea', 'error');
+    }
 
     try {
+        log(`⏳ Creando Tarea "${titleInp.value}"...`, 'info');
         await apiPost('/tasks', {
-            id: id.value,
-            title: title.value,
-            bucket_id: bId.value,
-            plan_id: pId.value,
-            percent_complete: parseInt(pc.value) || 0
+            id: "", // Graph genera ID auto
+            title: titleInp.value,
+            bucket_id: bSel.value,
+            plan_id: pSel.value,
+            percent_complete: parseInt(pcInp.value) || 0
         });
-        log(`Tarea "${title.value}" creada`, 'success');
-        listarTareas();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`✅ Tarea "${titleInp.value}" creada`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function actualizarTarea() {
-    const id = document.getElementById('updateTaskId').value;
-    const title = document.getElementById('updateTaskTitle').value;
-    const pc = document.getElementById('updateTaskPercent').value;
-    const bId = document.getElementById('updateTaskBucketId').value;
-    const pId = document.getElementById('updateTaskPlanId').value;
+    const idSel = document.getElementById('updateTaskId');
+    if (!idSel) return;
+    const id = idSel.value;
+    const title = document.getElementById('updateTaskTitle')?.value;
+    const pc = document.getElementById('updateTaskPercent')?.value;
+    const bId = document.getElementById('updateTaskBucketId')?.value;
+    const pId = document.getElementById('updateTaskPlanId')?.value;
+
+    if (!id || !title) return log('⚠️ Selecciona una tarea e ingresa un título', 'error');
 
     try {
         log(`⏳ Actualizando tarea ${id}...`, 'info');
-        const res = await fetch(`${api}/tasks/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title,
-                percent_complete: parseInt(pc) || 0,
-                bucket_id: bId,
-                plan_id: pId
-            })
+        await apiPut(`/tasks/${id}`, {
+            title,
+            percent_complete: parseInt(pc) || 0,
+            bucket_id: bId,
+            plan_id: pId
         });
-        if (!res.ok) throw new Error(await res.text());
-        log(`Tarea #${id} actualizada`, 'success');
-        listarTareas();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        log(`✅ Tarea #${id} actualizada`, 'success');
+        refreshAll();
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 async function eliminarTarea() {
-    const id = document.getElementById('deleteTaskId').value;
-    if (!id) return log('⚠️ ID de tarea requerido', 'error');
+    const idSel = document.getElementById('deleteTaskId');
+    if (!idSel) return;
+    const id = idSel.value;
+    if (!id) return log('⚠️ Selecciona una tarea para eliminar', 'error');
 
     if (!confirm(`¿Estás seguro de eliminar la tarea ${id}?`)) return;
 
     try {
         log(`🗑️ Eliminando tarea ${id}...`, 'info');
-        const res = await fetch(`${api}/tasks/${id}`, { method: 'DELETE' });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || 'Fallo al eliminar');
-        }
+        await apiDelete(`/tasks/${id}`);
         log(`✅ Tarea ${id} eliminada con éxito`, 'success');
-        listarTareas();
         refreshAll();
-    } catch (e) {
-        log('❌ Error: ' + e.message, 'error');
-    }
+    } catch (e) { log('❌ Error: ' + e.message, 'error'); }
 }
 
 // -----------------------------

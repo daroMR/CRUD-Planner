@@ -150,9 +150,9 @@
               </div>
             </div>
             <div class="tabs">
-              <button class="tab-btn active" onclick="showTab('edit-task')">Tarea</button>
-              <button class="tab-btn" onclick="showTab('edit-bucket')">Bucket</button>
-              <button class="tab-btn" onclick="showTab('edit-plan')">Plan</button>
+              <button class="tab-btn active" onclick="showTab('edit-task')">Tareas</button>
+              <button class="tab-btn" onclick="showTab('edit-bucket')">Buckets</button>
+              <button class="tab-btn" onclick="showTab('edit-plan')">Planes</button>
             </div>
 
             <div id="edit-task" class="tab-content active">
@@ -177,14 +177,15 @@
                 </div>
                 <div style="display:flex; gap:0.5rem;">
                   <button class="btn btn-primary" style="flex:1" onclick="actualizarTarea()">Actualizar Tarea</button>
-                  <button class="btn btn-danger" onclick="eliminarTarea()" title="Borrar permanentemente">🗑️</button>
                 </div>
               </div>
               <div class="input-group"
                 style="margin-top:1rem; border-top:1px solid var(--glass-border); padding-top:1rem;">
-                <label style="font-size: 0.7rem; color: var(--danger);">Zona Peligrosa:</label>
+                <label style="font-size: 0.7rem; color: var(--danger);">Zona Peligrosa (Eliminar):</label>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="text" id="deleteTaskId" placeholder="ID Tarea Directo">
+                  <select id="deleteTaskId" class="select-input" style="flex:1;">
+                    <option value="">Seleccionar Tarea a eliminar...</option>
+                  </select>
                   <button class="btn btn-danger" onclick="eliminarTarea()">Eliminar</button>
                 </div>
               </div>
@@ -197,6 +198,9 @@
                   <option value="">Seleccionar Bucket...</option>
                 </select>
                 <input type="text" id="manageBucketName" placeholder="Nuevo nombre del Bucket">
+                <select id="manageBucketPlanId" class="select-input">
+                  <option value="">Cambiar Plan Asociado...</option>
+                </select>
                 <div style="display:flex; gap:0.5rem;">
                   <button class="btn btn-primary" style="flex:1" onclick="actualizarBucket()">Actualizar</button>
                   <button class="btn btn-danger" onclick="eliminarBucket()">Eliminar</button>

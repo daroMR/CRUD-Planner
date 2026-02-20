@@ -17,21 +17,68 @@ function log(msg, type = 'info') {
     const logDiv = document.getElementById('log');
     if (!logDiv) return;
     const time = new Date().toLocaleTimeString();
-    const color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#a5b4fc';
-    logDiv.innerHTML += `<div><span style="color: #64748b">[${time}]</span> <span style="color: ${color}">${msg}</span></div>`;
+    const className = type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : '';
+    logDiv.innerHTML += `<div class="log-entry"><span style="color: #64748b">[${time}]</span> <span class="${className}">${msg}</span></div>`;
     logDiv.scrollTop = logDiv.scrollHeight;
 }
 
 function showLoading(show) {
-    const btn = document.querySelector('.btn-primary');
+    const btn = document.querySelector('.top-bar .btn-primary');
     if (btn) {
         if (show) {
-            btn.innerHTML = '<span class="icon animate-spin">⏳</span> Cargando...';
+            btn.innerHTML = '<span class="icon animate-spin">⏳</span> Sync...';
             btn.disabled = true;
         } else {
-            btn.innerHTML = '<span class="icon">🔄</span> Recargar Resumen';
+            btn.innerHTML = '<span class="icon">🔄</span> Sincronizar';
             btn.disabled = false;
         }
+    }
+}
+
+// -----------------------------
+// Navegación por Slides
+// -----------------------------
+
+function switchSlide(slideId) {
+    // 1. Quitar activo de todos los slides y nav items
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    // 2. Activar el seleccionado
+    const targetSlide = document.getElementById(slideId);
+    if (targetSlide) {
+        targetSlide.classList.add('active');
+        const navId = slideId.replace('slide-', 'nav-');
+        const navItem = document.getElementById(navId);
+        if (navItem) navItem.classList.add('active');
+
+        // 3. Actualizar título de la top-bar
+        const titleMap = {
+            'slide-dashboard': 'Resumen Ejecutivo',
+            'slide-admin': 'Gestión de Proyectos',
+            'slide-master': 'Maestro de Datos'
+        };
+        document.getElementById('current-slide-title').innerText = titleMap[slideId] || 'Panel';
+
+        log(`Cambiando a vista: ${titleMap[slideId]}`, 'info');
+    }
+}
+
+function showTab(tabId) {
+    // Maneja tanto tabs de creación como de edición buscando el contenedor padre común
+    const container = document.getElementById(tabId).parentElement;
+    container.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+    // El botón está en el contenedor de tabs antes de los contenidos
+    const tabsRow = container.querySelector('.tabs');
+    if (tabsRow) {
+        tabsRow.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    document.getElementById(tabId).classList.add('active');
+    // Marcar el botón como activo (si se llamó desde el evento)
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
     }
 }
 
@@ -100,11 +147,16 @@ function renderResumenArbol(plans) {
 }
 
 async function refreshAll() {
-    log('Actualizando todos los datos...', 'info');
-    await cargarResumenPlanner();
-    await listarPlanes();
-    await listarBuckets();
-    await listarTareas();
+    log('🔄 Iniciando sincronización completa...', 'info');
+    try {
+        await cargarResumenPlanner();
+        await listarPlanes();
+        await listarBuckets();
+        await listarTareas();
+        log('✅ Datos actualizados correctamente', 'success');
+    } catch (e) {
+        log('❌ Error al refrescar datos: ' + e.message, 'error');
+    }
 }
 
 function renderMasterTable(plansInput) {
@@ -437,15 +489,15 @@ async function actualizarTarea() {
     const pId = document.getElementById('updateTaskPlanId').value;
 
     try {
+        log(`⏳ Actualizando tarea ${id}...`, 'info');
         const res = await fetch(`${api}/tasks/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id: parseInt(id),
                 title,
-                percent_complete: parseInt(pc),
-                bucket_id: parseInt(bId),
-                plan_id: parseInt(pId)
+                percent_complete: parseInt(pc) || 0,
+                bucket_id: bId,
+                plan_id: pId
             })
         });
         if (!res.ok) throw new Error(await res.text());
@@ -456,14 +508,23 @@ async function actualizarTarea() {
 
 async function eliminarTarea() {
     const id = document.getElementById('deleteTaskId').value;
-    if (!id) return log('ID de tarea requerido', 'error');
+    if (!id) return log('⚠️ ID de tarea requerido', 'error');
+
+    if (!confirm(`¿Estás seguro de eliminar la tarea ${id}?`)) return;
 
     try {
+        log(`🗑️ Eliminando tarea ${id}...`, 'info');
         const res = await fetch(`${api}/tasks/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error(await res.text());
-        log(`Tarea #${id} eliminada`, 'success');
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Fallo al eliminar');
+        }
+        log(`✅ Tarea ${id} eliminada con éxito`, 'success');
         listarTareas();
-    } catch (e) { log('Error: ' + e.message, 'error'); }
+        refreshAll();
+    } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+    }
 }
 
 // -----------------------------
@@ -545,14 +606,12 @@ async function iniciarSesion() {
         log('Error al iniciar sesión: ' + e.message, 'error');
     }
 }
+// -----------------------------
+// Inicialización
+// -----------------------------
 
-window.onload = async () => {
-    log('Dashboard inicializando...', 'info');
-    const autenticado = await verificarAuth();
-    await refreshAll();
-    if (autenticado) {
-        log('Conexión con Planner establecida', 'success');
-    } else {
-        log('Modo local (Sin conexión a Microsoft)', 'info');
-    }
+window.onload = () => {
+    switchSlide('slide-dashboard');
+    refreshAll();
+    log('Sistema Optisa Planner Listo 🚀', 'success');
 };

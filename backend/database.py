@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Import absoluto (funciona en Docker con PYTHONPATH=/app)
+# Import absoluto
 from models import Base
 
 # Leer la URL de la base de datos desde la variable de entorno DATABASE_URL

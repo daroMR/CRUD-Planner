@@ -53,8 +53,10 @@ c:\CRUD-Planner\
 ├── docs/                         ★ DOCUMENTACIÓN TÉCNICA (Pilares 1-4)
 │
 ├── .env                          # Credenciales Azure (compartidas, NO versionar)
-├── .gitignore                    # Protege tokens, DB, logs, PNGs
-└── docker-compose.yml            # Infraestructura WEB (opcional, requiere Docker)
+├── README.md                     # Portal de entrada y guía rápida
+├── requirements.txt              # Dependencias raíz (para Render/Deploy)
+├── Procfile                      # Comandos de ejecución para Render
+└── render.yaml                   # Configuración de automatización Render
 ```
 
 ---

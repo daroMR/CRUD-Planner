@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import os
 import time
+import logging
 import models
 import schemas
 import database
@@ -14,7 +15,24 @@ import httpx
 from strawberry.fastapi import GraphQLRouter
 from graphql_schema import schema, get_context
 
+# ─── Logging Config ─────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("crud-planner")
+
 app = FastAPI(title="CRUD-Planner API", version="2.0.0")
+
+# ─── Request Logging Middleware ─────────────────────────────────
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    t0 = time.time()
+    response = await call_next(request)
+    elapsed = round((time.time() - t0) * 1000)
+    logger.info(f"{request.method} {request.url.path} → {response.status_code} ({elapsed}ms)")
+    return response
 
 @app.get("/")
 def root():
@@ -38,13 +56,15 @@ GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 @app.on_event("startup")
 async def startup_event():
-    # Inicializar la base de datos después de que el servidor esté listo
+    logger.info("[STARTUP] Initializing database...")
     max_retries = 10
     for i in range(max_retries):
         try:
             database.init_db()
+            logger.info("[STARTUP] Database ready ✓")
             break
         except Exception as e:
+            logger.warning(f"[STARTUP] DB retry {i+1}/{max_retries}: {e}")
             if i == max_retries - 1:
                 raise
             time.sleep(2)
@@ -98,27 +118,27 @@ app.include_router(graphql_app, prefix="/graphql")
 async def graph_call(method: str, endpoint: str, data: dict = None, etag: str = None):
     token = auth.get_access_token()
     if not token:
-        print(f"DEBUG: graph_call {endpoint} failed - No access token")
+        logger.warning(f"[GRAPH] {method} {endpoint} — No access token, skipping")
         return None
-    
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    # If-Match header para operaciones PATCH con concurrencia optimista
     if etag:
         headers["If-Match"] = etag
 
     url = f"https://graph.microsoft.com/v1.0{endpoint}"
     async with httpx.AsyncClient() as client:
-        print(f"DEBUG: graph_call {method} {url}")
+        logger.debug(f"[GRAPH] {method} {url}")
         res = await client.request(method, url, headers=headers, json=data)
         if res.status_code == 412:
-            print(f"Graph 412 Precondition Failed: ETag mismatch for {endpoint}")
+            logger.warning(f"[GRAPH] 412 Precondition Failed — ETag mismatch: {endpoint}")
             return None
         if res.status_code >= 400:
-            print(f"Graph Error: {res.status_code} - {res.text}")
+            logger.error(f"[GRAPH] {res.status_code} Error on {endpoint}: {res.text[:200]}")
             return None
+        logger.info(f"[GRAPH] {method} {endpoint} → {res.status_code}")
         return res.json() if res.status_code != 204 else {"ok": True}
 
 # -----------------------------
@@ -205,14 +225,25 @@ async def get_buckets(plan_id: str = None, db: Session = Depends(database.get_db
 
 @app.post("/buckets", response_model=schemas.Bucket)
 async def create_bucket(bucket: schemas.BucketCreate, db: Session = Depends(database.get_db)):
-    db_bucket = models.Bucket(name=bucket.name, plan_id=int(bucket.plan_id) if bucket.plan_id.isdigit() else 0)
+    # Si plan_id es UUID (Microsoft Planner)
+    if not bucket.plan_id.isdigit():
+        res = await graph_call("POST", "/planner/buckets", data={
+            "name": bucket.name,
+            "planId": bucket.plan_id
+        })
+        if res:
+            return schemas.Bucket(id=res["id"], name=res["name"], plan_id=bucket.plan_id)
+        raise HTTPException(status_code=400, detail="No se pudo crear el bucket en Microsoft Graph")
+
+    # Local fallback
+    db_bucket = models.Bucket(name=bucket.name, plan_id=int(bucket.plan_id))
     db.add(db_bucket)
     db.commit()
     db.refresh(db_bucket)
     return schemas.Bucket(id=str(db_bucket.id), name=db_bucket.name, plan_id=str(db_bucket.plan_id))
 
 @app.put("/buckets/{bucket_id}", response_model=schemas.Bucket)
-async def update_bucket(bucket_id: str, bucket: schemas.BucketCreate, db: Session = Depends(database.get_db)):
+async def update_bucket(bucket_id: str, bucket: schemas.BucketCreate, db: Session = Depends(database.get_db), if_match: str = None):
     if bucket_id.isdigit():
         db_bucket = db.query(models.Bucket).filter(models.Bucket.id == int(bucket_id)).first()
         if db_bucket:
@@ -223,13 +254,22 @@ async def update_bucket(bucket_id: str, bucket: schemas.BucketCreate, db: Sessio
             return schemas.Bucket(id=str(db_bucket.id), name=db_bucket.name, plan_id=str(db_bucket.plan_id))
     
     # Graph PATCH /planner/buckets/{id}
-    res = await graph_call("PATCH", f"/planner/buckets/{bucket_id}", data={"name": bucket.name})
+    # Si no hay ETag, lo obtenemos
+    if not if_match:
+        logger.info(f"[BUCKET] Obteniendo ETag para bucket {bucket_id}...")
+        bucket_info = await graph_call("GET", f"/planner/buckets/{bucket_id}")
+        if bucket_info and "@odata.etag" in bucket_info:
+            if_match = bucket_info["@odata.etag"]
+
+    res = await graph_call("PATCH", f"/planner/buckets/{bucket_id}", data={"name": bucket.name}, etag=if_match)
     if res:
         return schemas.Bucket(id=bucket_id, name=bucket.name, plan_id=bucket.plan_id)
+    if res is None and if_match:
+         raise HTTPException(status_code=412, detail="Conflicto de concurrencia al actualizar bucket.")
     raise HTTPException(status_code=404, detail="Bucket no encontrado")
 
 @app.delete("/buckets/{bucket_id}")
-async def delete_bucket(bucket_id: str, db: Session = Depends(database.get_db)):
+async def delete_bucket(bucket_id: str, db: Session = Depends(database.get_db), if_match: str = None):
     if bucket_id.isdigit():
         db_bucket = db.query(models.Bucket).filter(models.Bucket.id == int(bucket_id)).first()
         if db_bucket:
@@ -237,10 +277,17 @@ async def delete_bucket(bucket_id: str, db: Session = Depends(database.get_db)):
             db.commit()
             return {"ok": True}
     
-    res = await graph_call("DELETE", f"/planner/buckets/{bucket_id}")
+    # Graph DELETE /planner/buckets/{id}
+    if not if_match:
+        logger.info(f"[BUCKET] Obteniendo ETag para borrar bucket {bucket_id}...")
+        bucket_info = await graph_call("GET", f"/planner/buckets/{bucket_id}")
+        if bucket_info and "@odata.etag" in bucket_info:
+            if_match = bucket_info["@odata.etag"]
+
+    res = await graph_call("DELETE", f"/planner/buckets/{bucket_id}", etag=if_match)
     if res is not None:
         return {"ok": True}
-    raise HTTPException(status_code=404, detail="Bucket no encontrado")
+    raise HTTPException(status_code=404, detail="Bucket no encontrado en Graph")
 
 # -----------------------------
 # CRUD de Tareas
@@ -283,11 +330,30 @@ async def get_tasks(bucket_id: str = None, plan_id: str = None, db: Session = De
 
 @app.post("/tasks", response_model=schemas.Task)
 async def create_task(task: schemas.TaskCreate, db: Session = Depends(database.get_db)):
+    # Si plan_id es UUID (Microsoft Planner)
+    if not task.plan_id.isdigit():
+        res = await graph_call("POST", "/planner/tasks", data={
+            "planId": task.plan_id,
+            "bucketId": task.bucket_id,
+            "title": task.title,
+            "percentComplete": task.percent_complete
+        })
+        if res:
+            return schemas.Task(
+                id=res["id"],
+                title=res["title"],
+                percent_complete=res.get("percentComplete", 0),
+                bucket_id=task.bucket_id,
+                plan_id=task.plan_id
+            )
+        raise HTTPException(status_code=400, detail="No se pudo crear la tarea en Microsoft Graph")
+
+    # Local fallback
     db_task = models.Task(
         title=task.title,
         percent_complete=task.percent_complete,
-        bucket_id=int(task.bucket_id) if task.bucket_id.isdigit() else 0,
-        plan_id=int(task.plan_id) if task.plan_id.isdigit() else 0
+        bucket_id=int(task.bucket_id),
+        plan_id=int(task.plan_id)
     )
     db.add(db_task)
     db.commit()
@@ -325,6 +391,17 @@ async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depe
         "title": task.title,
         "percentComplete": task.percent_complete,
     }
+    # Permitir mover de bucket en Graph
+    if task.bucket_id:
+        patch_body["bucketId"] = task.bucket_id
+
+    # Si no hay ETag, lo obtenemos
+    if not if_match:
+        logger.info(f"[TASK] Obteniendo ETag para tarea {task_id}...")
+        task_info = await graph_call("GET", f"/planner/tasks/{task_id}")
+        if task_info and "@odata.etag" in task_info:
+            if_match = task_info["@odata.etag"]
+
     res = await graph_call("PATCH", f"/planner/tasks/{task_id}", data=patch_body, etag=if_match)
     if res:
         return schemas.Task(
@@ -339,7 +416,8 @@ async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depe
     raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
 @app.delete("/tasks/{task_id}")
-async def delete_task(task_id: str, db: Session = Depends(database.get_db)):
+async def delete_task(task_id: str, db: Session = Depends(database.get_db), if_match: str = None):
+    # 1. Intentar local (ID numérico)
     if task_id.isdigit():
         db_task = db.query(models.Task).filter(models.Task.id == int(task_id)).first()
         if db_task:
@@ -347,9 +425,16 @@ async def delete_task(task_id: str, db: Session = Depends(database.get_db)):
             db.commit()
             return {"ok": True}
     
-    # Intentar DELETE en Graph si el ID coincide
-    res = await graph_call("DELETE", f"/planner/tasks/{task_id}")
+    # 2. Intentar Graph (ID no numérico)
+    # Si no tenemos ETag, intentamos obtenerlo primero (Lazy Delete)
+    if not if_match:
+        logger.info(f"[DELETE] Intentando obtener ETag para {task_id} antes de borrar...")
+        task_info = await graph_call("GET", f"/planner/tasks/{task_id}")
+        if task_info and "@odata.etag" in task_info:
+            if_match = task_info["@odata.etag"]
+
+    res = await graph_call("DELETE", f"/planner/tasks/{task_id}", etag=if_match)
     if res is not None:
         return {"ok": True}
         
-    raise HTTPException(status_code=404, detail="Task not found")
+    raise HTTPException(status_code=404, detail="Tarea no encontrada o error al eliminar en Graph API.")

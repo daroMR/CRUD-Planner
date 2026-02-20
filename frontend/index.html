@@ -15,223 +15,243 @@
 </head>
 
 <body class="dark-theme">
-  <header class="main-header">
-    <div class="header-content">
-      <h1 class="logo">Optisa Planner</h1>
-      <nav class="main-nav">
-        <button class="btn btn-primary" onclick="refreshAll()">
-          <span class="icon">🔄</span> Recargar Resumen
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span>✦</span> Optisa Planner
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="switchSlide('slide-dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="switchSlide('slide-admin')" id="nav-admin">
+        <span class="icon">⚙️</span> Gestión
+      </div>
+      <div class="nav-item" onclick="switchSlide('slide-master')" id="nav-master">
+        <span class="icon">📜</span> Maestro
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <button id="loginBtn" class="btn btn-primary full-width" onclick="iniciarSesion()">
+          🔑 Conectar
         </button>
-      </nav>
+        <div id="userInfo"
+          style="display: none; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+          <span id="userName" class="badge">Usuario</span>
+        </div>
+      </div>
     </div>
-  </header>
+  </aside>
 
-  <main class="dashboard-container">
-    <!-- Resumen Section -->
-    <section class="card glass-card resumen-section">
-      <div class="card-header">
-        <div class="user-profile">
-          <button id="loginBtn" class="btn btn-primary" onclick="iniciarSesion()">
-            <span class="icon">🔑</span> Conectar Planner
-          </button>
-          <div id="userInfo" style="display: none;">
-            <span id="userName" class="badge">Usuario</span>
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <header class="top-bar">
+      <h2 id="current-slide-title">Vista General</h2>
+      <div class="top-bar-actions">
+        <button class="btn btn-primary" onclick="refreshAll()">
+          <span class="icon">🔄</span> Sincronizar
+        </button>
+      </div>
+    </header>
+
+    <div class="slides-container">
+      <!-- Slide 1: Dashboard -->
+      <section id="slide-dashboard" class="slide active">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h2>Vista Jerárquica</h2>
+              <span class="badge">GraphQL</span>
+            </div>
+            <div class="tree-viewer" style="height: calc(100% - 40px); overflow: auto;">
+              <div id="resumenArbol" class="tree-structure"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2>JSON Raw</h2>
+            </div>
+            <pre id="resumenJson" class="code-block" style="height: calc(100% - 40px);"></pre>
           </div>
         </div>
-        <h2>Resumen General</h2>
-        <span class="badge">GraphQL</span>
-      </div>
-      <div class="split-view">
-        <div class="json-viewer">
-          <h3>JSON Raw</h3>
-          <pre id="resumenJson" class="code-block"></pre>
-        </div>
-        <div class="tree-viewer">
-          <h3>Vista Jerárquica</h3>
-          <div id="resumenArbol" class="tree-structure"></div>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Management Grid -->
-    <div class="management-grid">
-      <!-- Create Section -->
-      <section class="card glass-card creation-panel">
-        <div class="card-header">
-          <h2>Gestión de Entidades</h2>
-        </div>
+      <!-- Slide 2: Gestión -->
+      <section id="slide-admin" class="slide">
+        <div class="management-layout">
+          <!-- Creation Forms -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Crear Entidades</h2>
+            </div>
+            <div class="tabs">
+              <button class="tab-btn active" onclick="showTab('tab-plans')">Planes</button>
+              <button class="tab-btn" onclick="showTab('tab-buckets')">Buckets</button>
+              <button class="tab-btn" onclick="showTab('tab-tasks')">Tareas</button>
+            </div>
 
-        <div class="tab-container">
-          <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('tab-plans')">Planes</button>
-            <button class="tab-btn" onclick="showTab('tab-buckets')">Buckets</button>
-            <button class="tab-btn" onclick="showTab('tab-tasks')">Tareas</button>
-          </div>
+            <div id="tab-plans" class="tab-content active">
+              <div class="input-group">
+                <input type="text" id="planName" placeholder="Nombre del Plan">
+                <input type="text" id="planId" placeholder="ID (Manual, opcional)">
+                <button class="btn btn-primary" onclick="crearPlan()">Crear Plan</button>
+              </div>
+            </div>
 
-          <div id="tab-plans" class="tab-content active">
-            <div class="input-group">
-              <input type="text" id="planName" placeholder="Nombre del Plan">
-              <input type="text" id="planId" placeholder="ID (Manual, opcional)">
-              <button class="btn btn-action" onclick="crearPlan()">Crear Plan</button>
+            <div id="tab-buckets" class="tab-content">
+              <div class="input-group">
+                <input type="text" id="bucketName" placeholder="Nombre Bucket">
+                <input type="text" id="bucketId" placeholder="ID (Opcional)">
+                <select id="bucketPlanId" class="select-input">
+                  <option value="">Seleccionar Plan...</option>
+                </select>
+                <button class="btn btn-primary" onclick="crearBucket()">Crear Bucket</button>
+              </div>
+            </div>
+
+            <div id="tab-tasks" class="tab-content">
+              <div class="input-group">
+                <input type="text" id="taskTitle" placeholder="Título Tarea">
+                <input type="text" id="taskId" placeholder="ID (Opcional)">
+                <select id="taskPlanId" class="select-input"
+                  onchange="updateBucketSelect('taskPlanId', 'taskBucketId')">
+                  <option value="">Plan...</option>
+                </select>
+                <select id="taskBucketId" class="select-input">
+                  <option value="">Bucket...</option>
+                </select>
+                <input type="number" id="taskPercent" placeholder="% Completado" value="0">
+                <button class="btn btn-primary" onclick="crearTarea()">Crear Tarea</button>
+              </div>
             </div>
           </div>
 
-          <div id="tab-buckets" class="tab-content">
-            <div class="input-group">
-              <input type="text" id="bucketName" placeholder="Nombre Bucket">
-              <input type="text" id="bucketId" placeholder="ID (Opcional)">
-              <select id="bucketPlanId" class="select-input">
-                <option value="">Seleccionar Plan...</option>
-              </select>
-              <button class="btn btn-action" onclick="crearBucket()">Crear Bucket</button>
+          <!-- Quick Actions / Update -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Actualizar & Eliminar</h2>
             </div>
-          </div>
+            <div class="tabs">
+              <button class="tab-btn active" onclick="showTab('edit-task')">Tarea</button>
+              <button class="tab-btn" onclick="showTab('edit-bucket')">Bucket</button>
+              <button class="tab-btn" onclick="showTab('edit-plan')">Plan</button>
+            </div>
 
-          <div id="tab-tasks" class="tab-content">
-            <div class="input-group">
-              <input type="text" id="taskTitle" placeholder="Título Tarea">
-              <input type="text" id="taskId" placeholder="ID (Opcional)">
-              <select id="taskPlanId" class="select-input" onchange="updateBucketSelect('taskPlanId', 'taskBucketId')">
-                <option value="">Seleccionar Plan...</option>
-              </select>
-              <select id="taskBucketId" class="select-input">
-                <option value="">Seleccionar Bucket...</option>
-              </select>
-              <input type="number" id="taskPercent" placeholder="% Completado" value="0">
-              <button class="btn btn-action" onclick="crearTarea()">Crear Tarea</button>
+            <div id="edit-task" class="tab-content active">
+              <div class="input-group">
+                <select id="updateTaskId" class="select-input" onchange="fillTaskData()">
+                  <option value="">Tarea...</option>
+                </select>
+                <input type="text" id="updateTaskTitle" placeholder="Nuevo Título">
+                <input type="number" id="updateTaskPercent" placeholder="%">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                  <select id="updateTaskPlanId" class="select-input"
+                    onchange="updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId')">
+                    <option value="">Plan...</option>
+                  </select>
+                  <select id="updateTaskBucketId" class="select-input">
+                    <option value="">Bucket...</option>
+                  </select>
+                </div>
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="btn btn-primary" style="flex:1" onclick="actualizarTarea()">Actualizar</button>
+                  <button class="btn btn-danger" onclick="eliminarTarea()">🗑️</button>
+                </div>
+              </div>
+              <div class="input-group"
+                style="margin-top:1rem; border-top:1px solid var(--glass-border); padding-top:1rem;">
+                <label>Borrar por ID Directo:</label>
+                <div style="display:flex; gap:0.5rem;">
+                  <input type="text" id="deleteTaskId" placeholder="ID Tarea">
+                  <button class="btn btn-danger" onclick="eliminarTarea()">Eliminar</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="edit-bucket" class="tab-content">
+              <div class="input-group">
+                <select id="manageBucketId" class="select-input" onchange="fillBucketData()">
+                  <option value="">Bucket...</option>
+                </select>
+                <input type="text" id="manageBucketName" placeholder="Nuevo Nombre">
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="btn btn-primary" style="flex:1" onclick="actualizarBucket()">Actualizar</button>
+                  <button class="btn btn-danger" onclick="eliminarBucket()">Eliminar</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="edit-plan" class="tab-content">
+              <div class="input-group">
+                <select id="managePlanId" class="select-input" onchange="fillPlanData()">
+                  <option value="">Plan...</option>
+                </select>
+                <input type="text" id="managePlanName" placeholder="Nuevo Nombre">
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="btn btn-primary" style="flex:1" onclick="actualizarPlan()">Actualizar</button>
+                  <button class="btn btn-danger" onclick="eliminarPlan()">Eliminar</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Update/Delete Panel -->
-      <section class="card glass-card update-panel">
-        <div class="card-header">
-          <h2>Acciones Rápidas</h2>
-        </div>
-        <div class="action-grid">
-          <div class="action-item">
-            <h3>Gestión de Planes</h3>
-            <div class="row">
-              <select id="managePlanId" class="select-input full-width" onchange="fillPlanData()">
-                <option value="">Seleccionar Plan...</option>
-              </select>
-              <input type="text" id="managePlanName" placeholder="Nuevo Nombre">
-            </div>
-            <div class="button-group">
-              <button class="btn btn-secondary" onclick="actualizarPlan()">Actualizar</button>
-              <button class="btn btn-danger" onclick="eliminarPlan()">Eliminar</button>
-            </div>
+      <!-- Slide 3: Maestro -->
+      <section id="slide-master" class="slide">
+        <div class="card">
+          <div class="card-header">
+            <h2>Maestro de Datos</h2>
+            <input type="text" id="masterSearch" placeholder="Filtrar..." oninput="renderMasterTable()"
+              style="max-width:300px; margin-bottom:0;">
           </div>
-
-          <div class="action-item">
-            <h3>Gestión de Buckets</h3>
-            <div class="row">
-              <select id="manageBucketId" class="select-input full-width" onchange="fillBucketData()">
-                <option value="">Seleccionar Bucket...</option>
-              </select>
-              <input type="text" id="manageBucketName" placeholder="Nuevo Nombre">
-            </div>
-            <select id="manageBucketPlanId" class="select-input full-width">
-              <option value="">Plan Asociado (Opcional)...</option>
-            </select>
-            <div class="button-group">
-              <button class="btn btn-secondary" onclick="actualizarBucket()">Actualizar</button>
-              <button class="btn btn-danger" onclick="eliminarBucket()">Eliminar</button>
-            </div>
-          </div>
-
-          <div class="action-item">
-            <h3>Actualizar Tarea</h3>
-            <select id="updateTaskId" class="select-input full-width" onchange="fillTaskData()">
-              <option value="">Seleccionar Tarea...</option>
-            </select>
-            <input type="text" id="updateTaskTitle" placeholder="Nuevo Título">
-            <input type="number" id="updateTaskPercent" placeholder="%">
-            <div class="row">
-              <select id="updateTaskPlanId" class="select-input"
-                onchange="updateBucketSelect('updateTaskPlanId', 'updateTaskBucketId')">
-                <option value="">Plan...</option>
-              </select>
-              <select id="updateTaskBucketId" class="select-input">
-                <option value="">Bucket...</option>
-              </select>
-            </div>
-            <button class="btn btn-secondary full-width" onclick="actualizarTarea()">Actualizar</button>
-          </div>
-          <div class="action-item">
-            <h3>Eliminar Tarea</h3>
-            <select id="deleteTaskId" class="select-input full-width">
-              <option value="">Seleccionar Tarea...</option>
-            </select>
-            <button class="btn btn-danger full-width" onclick="eliminarTarea()">Eliminar</button>
+          <div class="table-wrapper" style="height: calc(100% - 60px);">
+            <table id="tablaMaestra">
+              <thead>
+                <tr>
+                  <th>Plan</th>
+                  <th>Bucket</th>
+                  <th>Título</th>
+                  <th>%</th>
+                  <th>IDs</th>
+                </tr>
+              </thead>
+              <tbody id="masterTableBody"></tbody>
+            </table>
           </div>
         </div>
       </section>
     </div>
 
-    <!-- Unified Data View -->
-    <section class="card glass-card data-section">
-      <div class="card-header">
-        <h2>Maestro de Datos (Jerárquico)</h2>
-        <div class="table-controls">
-          <input type="text" id="masterSearch" class="filter-input" placeholder="Buscar en todo..."
-            oninput="renderMasterTable()">
-          <button class="btn btn-small" onclick="refreshAll()">🔄 Sincronizar Todo</button>
-        </div>
-      </div>
-
-      <div class="table-wrapper full-width scrollable" style="max-height: 500px;">
-        <table id="tablaMaestra">
-          <thead>
-            <tr>
-              <th>Plan</th>
-              <th>Bucket</th>
-              <th>Título de Tarea</th>
-              <th>%</th>
-              <th>IDs (Plan/Bucket/Tarea)</th>
-            </tr>
-          </thead>
-          <tbody id="masterTableBody"></tbody>
-        </table>
-      </div>
-    </section>
+    <!-- Log at bottom -->
+    <footer id="log" class="console-log"></footer>
   </main>
 
-  <footer class="main-footer">
-    <div id="log" class="console-log"></div>
-  </footer>
-
-  <!-- Auth Modal -->
-  <div id="authModal" class="glass-card"
-    style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; padding: 2rem; max-width: 400px; width: 90%;">
+  <!-- Auth Modal (Mismo de antes) -->
+  <div id="authModal" class="card glass-card"
+    style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; width: 350px;">
     <div class="card-header">
-      <h2>Autenticación Microsoft</h2>
+      <h2>Auth Microsoft</h2>
     </div>
-    <div style="text-align: center;">
-      <p>Para conectar tu Planner, por favor visita:</p>
+    <div style="text-align: center; padding: 1rem;">
+      <p style="font-size: 0.8rem; color: var(--text-muted);">Visita:</p>
       <a id="authUrl" href="#" target="_blank"
-        style="color: var(--primary); font-weight: bold; margin: 1rem 0; display: block;">microsoft.com/devicelogin</a>
-      <p>E introduce el siguiente código:</p>
+        style="color: var(--primary); font-weight: bold;">microsoft.com/devicelogin</a>
+      <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">Código:</p>
       <div id="authCode"
-        style="font-size: 2rem; font-weight: 800; letter-spacing: 0.2em; margin: 1.5rem 0; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 8px;">
+        style="font-size: 1.5rem; font-weight: 800; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin: 0.5rem 0;">
         XXXX-XXXX</div>
-      <p id="authStatusMsg" style="color: var(--text-muted); font-size: 0.8rem;">Esperando inicio de sesión...</p>
+      <p id="authStatusMsg" style="font-size: 0.7rem;">Cargando...</p>
     </div>
   </div>
   <div id="modalOverlay"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000;">
   </div>
 
   <script src="app.js"></script>
-  <script>
-    function showTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      event.currentTarget.classList.add('active');
-    }
-  </script>
 </body>
 
 </html>

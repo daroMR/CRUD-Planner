@@ -15,6 +15,6 @@ backend/planner.db
 # Logs de servidor
 backend/server_log.txt
 
-# D2 outputs (generados, no fuente)
-info/*.svg
-info/*.png
+# D2 outputs (versionamos para despliegue)
+# info/*.svg
+# info/*.png

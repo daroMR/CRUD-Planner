@@ -1,5 +1,9 @@
 // URL base de la API
-const api = 'http://localhost:3000';
+// URL base de la API — Detecta si estás en local o en Render automáticamente
+const api = window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : window.location.origin;
+
 
 // -----------------------------
 // Logging, UI State & Global Data

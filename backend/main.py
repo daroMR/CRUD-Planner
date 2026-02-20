@@ -1,7 +1,10 @@
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List
+import os
 import time
 import models
 import schemas
@@ -15,14 +18,12 @@ app = FastAPI(title="CRUD-Planner API", version="2.0.0")
 
 @app.get("/")
 def root():
-    return {
-        "app": "CRUD-Planner API",
-        "version": "2.0",
-        "docs": "/docs",
-        "graphql": "/graphql",
-        "auth": "/auth/status",
-        "status": "online"
-    }
+    return RedirectResponse(url="/app/index.html")
+
+# Servir el frontend estático desde /app
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/app", StaticFiles(directory=frontend_path), name="frontend")
 
 # Permitir CORS para pruebas locales
 app.add_middleware(

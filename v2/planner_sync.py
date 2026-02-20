@@ -42,6 +42,17 @@ def graph_get(url, token):
     response.raise_for_status()
     return response.json()
 
+def graph_patch(url, token, data, etag):
+    """Realiza una petición PATCH a Microsoft Graph API con If-Match (ETag)."""
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json',
+        'If-Match': etag
+    }
+    response = requests.patch(url, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()
+
 def parse_description(description):
     """
     Analiza la descripción de una tarea en busca de etiquetas ##Clave: Valor.
@@ -142,7 +153,10 @@ def sync(mode="full"):
                     }
         
         # Integración con Excel
-        wb = xw.Book.caller() if hasattr(xw, 'Book') and xw.Book.caller() else xw.books.active
+        try:
+            wb = xw.Book.caller()
+        except Exception:
+            wb = xw.books.active
         sheet = wb.sheets.active
         
         # Asegurar Encabezados base
@@ -196,24 +210,90 @@ def sync(mode="full"):
             print(f"Sincronización completa. {len(data_to_write)} tareas actualizadas.")
 
         elif mode == "compare":
-            # Lógica de comparación inteligente
+            # Lógica de comparación inteligente (Semáforo completo)
+            title_col_idx = header_map.get("Task Title", 3)
+            status_col_idx = header_map.get("Status", 4)
+
             for t_id, p_task in all_planner_tasks.items():
                 if t_id in excel_data:
                     e_task_row = excel_data[t_id]
                     e_row_idx = e_task_row["row_idx"]
                     e_etag = e_task_row["data"][etag_col_idx]
-                    
-                    if p_task["ETag"] != e_etag:
-                        # Planner tiene información nueva (ETag diferente)
+                    e_title = e_task_row["data"][title_col_idx] if title_col_idx < len(e_task_row["data"]) else ""
+                    e_status = e_task_row["data"][status_col_idx] if status_col_idx < len(e_task_row["data"]) else ""
+
+                    planner_changed = (p_task["ETag"] != e_etag)
+                    excel_changed = (e_title != p_task.get("Task Title", "")) or (e_status != p_task.get("Status", ""))
+
+                    if planner_changed and excel_changed:
+                        # Both sides changed — CONFLICT
+                        rows_to_highlight[e_row_idx] = COLOR_CONFLICT
+                    elif planner_changed:
+                        # Only Planner changed
                         rows_to_highlight[e_row_idx] = COLOR_PLANNER_NEW
+                    elif excel_changed:
+                        # Only Excel was edited locally
+                        rows_to_highlight[e_row_idx] = COLOR_EXCEL_NEW
                     else:
                         rows_to_highlight[e_row_idx] = COLOR_DEFAULT
-                
+
             # Aplicar Resaltado Visual
             for r_idx, color in rows_to_highlight.items():
                 sheet.range(f'{r_idx}:{r_idx}').color = color
-                
+
             print("Comparación finalizada. Resaltado aplicado en Excel.")
+
+        elif mode == "push":
+            # Lógica de Push: Excel → Planner (con If-Match ETag)
+            title_col_idx = header_map.get("Task Title", 3)
+            status_col_idx = header_map.get("Status", 4)
+            pushed = 0
+            errors = 0
+
+            for t_id, e_info in excel_data.items():
+                e_row_idx = e_info["row_idx"]
+                e_data = e_info["data"]
+                e_etag = e_data[etag_col_idx] if etag_col_idx < len(e_data) else None
+
+                if not t_id or not e_etag:
+                    continue
+
+                e_title = e_data[title_col_idx] if title_col_idx < len(e_data) else ""
+                e_status = e_data[status_col_idx] if status_col_idx < len(e_data) else ""
+
+                # Convert status text back to percentComplete
+                if e_status == "Completada":
+                    percent = 100
+                elif e_status == "Iniciada":
+                    percent = 50
+                else:
+                    percent = 0
+
+                patch_body = {
+                    "title": e_title,
+                    "percentComplete": percent
+                }
+
+                try:
+                    result = graph_patch(
+                        f"https://graph.microsoft.com/v1.0/planner/tasks/{t_id}",
+                        token, patch_body, e_etag
+                    )
+                    # Update ETag in Excel with the new one from server
+                    new_etag = result.get('@odata.etag', e_etag)
+                    sheet.range(f'{xw.utils.col_name(etag_col_idx + 1)}{e_row_idx}').value = new_etag
+                    pushed += 1
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 412:
+                        # Precondition Failed — someone else modified the task
+                        sheet.range(f'{e_row_idx}:{e_row_idx}').color = COLOR_CONFLICT
+                    errors += 1
+                    print(f"Error al subir tarea {t_id}: {e}")
+                except Exception as e:
+                    errors += 1
+                    print(f"Error inesperado en tarea {t_id}: {e}")
+
+            print(f"Push finalizado. {pushed} tareas subidas, {errors} errores.")
 
     except Exception as e:
         print(f"ERROR: {e}")
@@ -237,4 +317,7 @@ def apply_premium_styling(sheet):
 if __name__ == "__main__":
     import sys
     arg = sys.argv[1] if len(sys.argv) > 1 else "full"
-    sync(arg)
+    if arg not in ("full", "compare", "push"):
+        print(f"Modo desconocido: {arg}. Usa: full, compare, push")
+    else:
+        sync(arg)

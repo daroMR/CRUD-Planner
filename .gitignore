@@ -4,3 +4,17 @@ dist/
 *.pyc
 __pycache__/
 .DS_Store
+
+# Tokens y credenciales
+backend/token_cache.bin
+
+# Base de datos local
+backend/planner.db
+*.db
+
+# Logs de servidor
+backend/server_log.txt
+
+# D2 outputs (generados, no fuente)
+info/*.svg
+info/*.png

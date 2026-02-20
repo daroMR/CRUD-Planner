@@ -1,0 +1,396 @@
+direction: down
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 200
+  }
+}
+
+classes: {
+  biz: {
+    style: {
+      fill: "#1A1A2E"
+      stroke: "#FFD700"
+      stroke-width: 3
+      shadow: true
+      border-radius: 12
+      font-color: "#FFD700"
+      font-size: 14
+      bold: true
+    }
+  }
+  ux: {
+    style: {
+      fill: "#002060"
+      stroke: "#FFFFFF"
+      stroke-width: 2
+      shadow: true
+      border-radius: 8
+      font-color: "#FFFFFF"
+      font-size: 12
+    }
+  }
+  logic: {
+    style: {
+      fill: "#14532D"
+      stroke: "#4ADE80"
+      stroke-width: 2
+      border-radius: 6
+      font-color: "#BBF7D0"
+      font-size: 12
+    }
+  }
+  python: {
+    style: {
+      fill: "#1E293B"
+      stroke: "#38BDF8"
+      stroke-width: 2
+      border-radius: 8
+      font-color: "#BAE6FD"
+      font-size: 12
+    }
+  }
+  decision: {
+    shape: diamond
+    style: {
+      fill: "#78350F"
+      stroke: "#F59E0B"
+      stroke-width: 2
+      font-color: "#FEF3C7"
+      font-size: 12
+      bold: true
+    }
+  }
+  web: {
+    style: {
+      fill: "#1E1B4B"
+      stroke: "#818CF8"
+      stroke-width: 2
+      border-radius: 8
+      font-color: "#C7D2FE"
+      font-size: 12
+    }
+  }
+  signal-ok: {
+    style: {
+      fill: "#065F46"
+      stroke: "#34D399"
+      border-radius: 16
+      font-color: "#A7F3D0"
+      font-size: 11
+      bold: true
+    }
+  }
+  signal-warn: {
+    style: {
+      fill: "#78350F"
+      stroke: "#FBBF24"
+      border-radius: 16
+      font-color: "#FDE68A"
+      font-size: 11
+      bold: true
+    }
+  }
+  signal-excel: {
+    style: {
+      fill: "#1e3a5f"
+      stroke: "#60a5fa"
+      border-radius: 16
+      font-color: "#bfdbfe"
+      font-size: 11
+      bold: true
+    }
+  }
+  signal-danger: {
+    style: {
+      fill: "#7F1D1D"
+      stroke: "#F87171"
+      border-radius: 16
+      font-color: "#FECACA"
+      font-size: 11
+      bold: true
+    }
+  }
+  cloud-node: {
+    shape: cloud
+    style: {
+      fill: "#0F172A"
+      stroke: "#38BDF8"
+      stroke-width: 3
+      font-color: "#BAE6FD"
+      font-size: 14
+      bold: true
+    }
+  }
+}
+
+# ═══════════════════════════════════
+#  CAPA DE NEGOCIO
+# ═══════════════════════════════════
+
+NEGOCIO: "🏢 OBJETIVOS DE NEGOCIO" {
+  style: {
+    fill: "#0D0D1A"
+    stroke: "#FFD700"
+    stroke-width: 2
+    border-radius: 14
+    font-color: "#FFD700"
+    bold: true
+    font-size: 15
+  }
+
+  OBJ1: "🎯 Visibilidad Financiera\n& Cronograma" {
+    class: biz
+    tooltip: "Ver dinero, fechas y estado de tareas en tiempo real desde Excel o Browser."
+  }
+  OBJ2: "🛡️ Integridad de Datos\nCero Pérdida por Conflicto" {
+    class: biz
+    tooltip: "Nunca sobrescribir un cambio sin que el usuario lo sepa. ETags + Semáforo."
+  }
+  OBJ3: "⚡ Autonomía del Usuario\nSin Depender de IT" {
+    class: biz
+    tooltip: "Operar desde Excel (.xlsm) o desde el browser. Sin instalar servidores."
+  }
+}
+
+# ═══════════════════════════════════
+#  TRACK EXCEL — CEREBRO HÍBRIDO
+# ═══════════════════════════════════
+
+EXCEL_TRACK: "📊 TRACK EXCEL (V2 Definitivo)" {
+  style: {
+    fill: "#020617"
+    stroke: "#4ADE80"
+    stroke-width: 3
+    border-radius: 14
+    font-color: "#4ADE80"
+    bold: true
+    font-size: 14
+  }
+
+  EXCEL_UI: "📊 Excel UI\n(.xlsm Activo)" {
+    class: ux
+    tooltip: "Hoja Tareas + Hoja Config (tokens). El libro está abierto cuando se sincroniza."
+  }
+
+  BTN_PANEL: "Panel de Botones" {
+    class: ux
+    style.stroke-dash: 3
+
+    BTN_LOGIN: "🔐 Login"
+    BTN_SYNC: "🔄 Sync"
+    BTN_COMP: "🔍 Comparar"
+    BTN_PUSH: "⬆️ Push"
+  }
+
+  SYNC_MOD: "🧠 SyncModule.bas\n(Orquestador Maestro)" {
+    class: logic
+    tooltip: "El cerebro. Detecta Python, enruta al modo correcto, maneja errores."
+  }
+
+  MOD_AUTH: "🔐 ModAuth.bas\n(Device Flow)" {
+    class: logic
+    tooltip: "Login VBA puro. Copia código al portapapeles. Guarda tokens en hoja Config."
+  }
+
+  DECISION: "¿HasPython()?" {
+    class: decision
+    tooltip: "Verifica si xlwings + Python están disponibles en el entorno actual."
+  }
+
+  PATH_V2: "🐍 MOTOR V2 — Python Supreme" {
+    class: python
+
+    PY_SYNC: "planner_sync.py\nFull / Compare / Push"
+    GRAPH_PATCH: "graph_patch()\nPATCH + If-Match ✅"
+    TAG_PARSER: "parse_description()\n##Dinero ##Fecha ##Check"
+
+    SEMAFORO: "Semáforo Visual" {
+      S_OK: "⬜ Sin Cambios" { class: signal-ok }
+      S_PLN: "🟧 Planner > Excel" { class: signal-warn }
+      S_EXL: "🟦 Excel > Planner" { class: signal-excel }
+      S_CON: "🟥 Conflicto" { class: signal-danger }
+    }
+
+    PREMIUM: "✨ Premium Style\nBold + Azul + Autofit"
+
+    PY_SYNC -> GRAPH_PATCH: "Push Mode"
+    PY_SYNC -> TAG_PARSER: "Full/Compare"
+    PY_SYNC -> SEMAFORO: "Compare"
+    PY_SYNC -> PREMIUM: "Full"
+  }
+
+  PATH_V1: "🛡️ FALLBACK V1 — VBA Puro" {
+    class: logic
+    style.stroke-dash: 3
+
+    MOD_GRAPH: "ModGraphAPI.bas\nGET + PATCH + Retry 401"
+    VBA_FETCH: "FetchAll_VBA()\nDatos Básicos"
+
+    MOD_GRAPH -> VBA_FETCH
+  }
+
+  EXCEL_UI -> BTN_PANEL
+  BTN_LOGIN -> MOD_AUTH: "Click"
+  BTN_SYNC -> SYNC_MOD: "Click"
+  BTN_COMP -> SYNC_MOD: "Click"
+  BTN_PUSH -> SYNC_MOD: "Click"
+
+  SYNC_MOD -> DECISION
+  DECISION -> PATH_V2.PY_SYNC: "SÍ — RunPython()" {
+    style.stroke: "#38BDF8"
+    style.stroke-width: 3
+    style.animated: true
+  }
+  DECISION -> PATH_V1.VBA_FETCH: "NO — Legacy Safe" {
+    style.stroke: "#F59E0B"
+    style.stroke-width: 2
+    style.stroke-dash: 3
+  }
+
+  PATH_V2.PY_SYNC -> EXCEL_UI: "Escribe Datos\n+ Colores + Estilo" {
+    style.stroke: "#38BDF8"
+    style.animated: true
+  }
+  PATH_V1.VBA_FETCH -> EXCEL_UI: "Escribe Datos Básicos" {
+    style.stroke: "#4ADE80"
+    style.stroke-dash: 3
+  }
+}
+
+# ═══════════════════════════════════
+#  TRACK WEB — PORTABLE (SIN DOCKER)
+# ═══════════════════════════════════
+
+WEB_TRACK: "🌐 TRACK WEB (Portable)" {
+  style: {
+    fill: "#0A1228"
+    stroke: "#818CF8"
+    stroke-width: 2
+    border-radius: 14
+    font-color: "#818CF8"
+    bold: true
+    font-size: 14
+  }
+
+  SPA: "🖥️ Frontend SPA\n(HTML/JS/CSS)" {
+    class: web
+    tooltip: "Minisite estático. Se puede hostear en GitHub Pages o Render.com"
+  }
+
+  FASTAPI: "⚡ FastAPI\n(python main.py)" {
+    class: web
+    tooltip: "Script directo: uvicorn main:app. Sin Docker. Portátil."
+  }
+
+  AUTH_WEB: "🔐 MSAL PublicClient\n+ Device Flow" {
+    class: web
+    tooltip: "GET /auth/login → device_code. Token cacheado en memoria."
+  }
+
+  GQL: "Strawberry GraphQL\n/graphql" {
+    class: web
+    tooltip: "Query + Mutation. Fallback a SQLite si Graph no responde."
+  }
+
+  LOCAL_DB: "SQLite / PostgreSQL\n(Fallback Local)" {
+    class: web
+    shape: cylinder
+    tooltip: "Capa de resiliencia: guarda datos si Graph está caído o sin auth."
+  }
+
+  DEPLOY: "🚀 Opciones de Deploy" {
+    class: web
+    style.stroke-dash: 3
+
+    D1: "python main.py\n(localhost:8000)"
+    D2: "Render.com\n(Free Tier URL)"
+    D3: "GitHub Pages\n(Solo Frontend)"
+  }
+
+  SPA -> FASTAPI: "Consume API" {
+    style.stroke: "#818CF8"
+    style.animated: true
+  }
+  FASTAPI -> AUTH_WEB
+  FASTAPI -> GQL
+  FASTAPI -> LOCAL_DB: "ORM Fallback" {
+    style.stroke-dash: 3
+  }
+  DEPLOY.D1 -> FASTAPI
+  DEPLOY.D2 -> FASTAPI
+}
+
+# ═══════════════════════════════════
+#  FUENTE DE VERDAD COMPARTIDA
+# ═══════════════════════════════════
+
+MS_GRAPH: "☁️ Microsoft Graph API v1.0\nPlanner: Plans → Buckets → Tasks" {
+  class: cloud-node
+  tooltip: "Fuente de verdad compartida. Ambos tracks leen y escriben aquí."
+}
+
+# ═══════════════════════════════════
+#  GOLDEN THREAD CONNECTIONS
+# ═══════════════════════════════════
+
+NEGOCIO.OBJ1 -> EXCEL_TRACK.EXCEL_UI: "Columnas dinámicas\n(##Tags → celdas)" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 3
+  style.animated: true
+}
+NEGOCIO.OBJ1 -> WEB_TRACK.SPA: "Dashboard visual" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 3
+  style.animated: true
+}
+NEGOCIO.OBJ2 -> EXCEL_TRACK.PATH_V2.SEMAFORO: "Semáforo = integridad visual" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 2
+  style.animated: true
+}
+NEGOCIO.OBJ2 -> WEB_TRACK.LOCAL_DB: "DB Fallback = resiliencia" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 2
+  style.animated: true
+}
+NEGOCIO.OBJ3 -> EXCEL_TRACK.BTN_PANEL: "Botones nativos Excel" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 2
+  style.animated: true
+}
+NEGOCIO.OBJ3 -> WEB_TRACK.DEPLOY: "Sin instalar nada" {
+  style.stroke: "#FFD700"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+EXCEL_TRACK.MOD_AUTH -> MS_GRAPH: "Device Auth\n(VBA)" {
+  style.stroke: "#38BDF8"
+  style.stroke-width: 2
+  style.animated: true
+}
+EXCEL_TRACK.PATH_V2.PY_SYNC -> MS_GRAPH: "Full / Compare\n(client_credentials)" {
+  style.stroke: "#38BDF8"
+  style.stroke-width: 3
+  style.animated: true
+}
+EXCEL_TRACK.PATH_V2.GRAPH_PATCH -> MS_GRAPH: "PATCH + If-Match\n(Push Mode)" {
+  style.stroke: "#F59E0B"
+  style.stroke-width: 3
+  style.animated: true
+}
+EXCEL_TRACK.PATH_V1.MOD_GRAPH -> MS_GRAPH: "GET Simple\n(VBA Fallback)" {
+  style.stroke: "#4ADE80"
+  style.stroke-dash: 3
+}
+WEB_TRACK.AUTH_WEB -> MS_GRAPH: "Device Auth\n(delegated)" {
+  style.stroke: "#818CF8"
+  style.stroke-width: 2
+  style.animated: true
+}
+WEB_TRACK.FASTAPI -> MS_GRAPH: "CRUD Web\n(user token)" {
+  style.stroke: "#818CF8"
+  style.animated: true
+}

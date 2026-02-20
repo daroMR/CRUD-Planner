@@ -1,9 +1,20 @@
 Attribute VB_Name = "ModAuth"
 Option Explicit
 
+' ╔══════════════════════════════════════════════════════════════╗
+' ║  CRUD-Planner — Autenticación Device Flow (Definitiva)     ║
+' ║  Desde V1: Auth directa desde VBA sin servidor backend     ║
+' ╚══════════════════════════════════════════════════════════════╝
+
+' Función auxiliar para esperar (64 bits compatible)
+#If VBA7 Then
+    Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As LongPtr)
+#Else
+    Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#End If
+
 ''' <summary>
-''' Inicia el flujo de Device Code.
-''' Muestra un cuadro de mensaje con el código que el usuario debe ingresar en la web de MS.
+''' Inicia Device Flow: muestra código al usuario para autenticarse en la web de MS.
 ''' </summary>
 Public Sub Login()
     Dim http As Object
@@ -18,7 +29,6 @@ Public Sub Login()
     http.Send body
     
     If http.Status = 200 Then
-        ' Parsear respuesta (Requiere JsonConverter)
         Dim json As Object
         Set json = JsonConverter.ParseJson(http.ResponseText)
         
@@ -27,18 +37,26 @@ Public Sub Login()
         Dim deviceCode As String: deviceCode = json("device_code")
         Dim interval As Long: interval = json("interval")
         
-        ' Mostrar instrucciones al usuario
-        MsgBox "Por favor, visita: " & verificationUrl & vbCrLf & _
-               "Ingresa el código: " & userCode & vbCrLf & vbCrLf & _
-               "Haz clic en Aceptar DESPUÉS de haber ingresado el código en el navegador.", vbInformation, "Autenticación Planner"
+        ' Copiar código al portapapeles para conveniencia
+        Dim clipboard As Object
+        Set clipboard = CreateObject("new:{1C3B4210-F441-11CE-B9EA-00AA006B1A69}")
+        clipboard.SetText userCode
+        clipboard.PutInClipboard
         
-        ' Iniciar sondeo (polling) para obtener el token
+        MsgBox "1. Visita: " & verificationUrl & vbCrLf & _
+               "2. Pega el código: " & userCode & " (ya está en tu portapapeles)" & vbCrLf & vbCrLf & _
+               "Haz clic en Aceptar DESPUÉS de completar la autenticación.", _
+               vbInformation, "Crud-Planner — Autenticación"
+        
         PollForToken deviceCode, interval
     Else
         MsgBox "Error al obtener el código de dispositivo: " & http.ResponseText, vbCritical
     End If
 End Sub
 
+''' <summary>
+''' Sondea el endpoint de token hasta obtener el access_token.
+''' </summary>
 Private Sub PollForToken(deviceCode As String, interval As Long)
     Dim http As Object
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
@@ -51,7 +69,9 @@ Private Sub PollForToken(deviceCode As String, interval As Long)
     Dim success As Boolean: success = False
     Dim attempts As Integer: attempts = 0
     
-    Do While Not success And attempts < 20 ' Máximo 20 intentos
+    Application.StatusBar = "Esperando autenticación del usuario..."
+    
+    Do While Not success And attempts < 30
         http.Open "POST", url, False
         http.SetRequestHeader "Content-Type", "application/x-www-form-urlencoded"
         http.Send body
@@ -61,21 +81,27 @@ Private Sub PollForToken(deviceCode As String, interval As Long)
         
         If http.Status = 200 Then
             SaveTokens json("access_token"), json("refresh_token"), json("expires_in")
-            MsgBox "¡Autenticación exitosa!", vbInformation
+            Application.StatusBar = False
+            MsgBox "¡Autenticación exitosa! Ya puedes sincronizar.", vbInformation, "Crud-Planner"
             success = True
         ElseIf json("error") = "authorization_pending" Then
-            ' Esperar el intervalo sugerido
             Sleep interval * 1000
             attempts = attempts + 1
         Else
+            Application.StatusBar = False
             MsgBox "Error de autenticación: " & json("error_description"), vbCritical
             Exit Sub
         End If
     Loop
+    
+    If Not success Then
+        Application.StatusBar = False
+        MsgBox "Tiempo de autenticación agotado. Intenta de nuevo.", vbExclamation
+    End If
 End Sub
 
 ''' <summary>
-''' Intercambia el Refresh Token por un nuevo Access Token.
+''' Renueva el Access Token usando el Refresh Token.
 ''' </summary>
 Public Function RefreshTokenSession() As Boolean
     If RefreshToken = "" Then LoadTokens
@@ -105,10 +131,3 @@ Public Function RefreshTokenSession() As Boolean
         RefreshTokenSession = False
     End If
 End Function
-
-' Función auxiliar para esperar (Declare PtrSafe para 64 bits)
-#If VBA7 Then
-    Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As LongPtr)
-#Else
-    Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
-#End If

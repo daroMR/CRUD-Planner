@@ -1,11 +1,14 @@
 Attribute VB_Name = "ModConfig"
 Option Explicit
 
-' --- Configuración de Azure / MS Graph ---
-' Para cuentas personales, puedes usar una App Registration genérica o crear la tuya en el portal de Azure.
-' IMPORTANTE: Reemplaza "YOUR_CLIENT_ID" con tu Client ID real.
+' ╔══════════════════════════════════════════════════════════════╗
+' ║  CRUD-Planner — Configuración Centralizada (Definitiva)    ║
+' ║  Fusión de V1 (constantes VBA) + V2 (Python bridge)        ║
+' ╚══════════════════════════════════════════════════════════════╝
+
+' --- Azure / MS Graph ---
 Public Const CLIENT_ID As String = "1844799e-1ce4-4d2d-9c40-3beff517f243"
-Public Const TENANT_ID As String = "common" ' "common" para cuentas personales y corporativas
+Public Const TENANT_ID As String = "common"
 Public Const SCOPES As String = "Tasks.ReadWrite User.Read openid profile offline_access"
 
 ' --- Endpoints ---
@@ -17,13 +20,13 @@ Public Const GRAPH_API_BASE As String = "https://graph.microsoft.com/v1.0"
 Public Const SHEET_TASKS As String = "Tareas"
 Public Const SHEET_CONFIG As String = "Config"
 
-' --- Variables Globales ---
+' --- Variables Globales (Tokens en memoria) ---
 Public AccessToken As String
 Public RefreshToken As String
 Public TokenExpiry As Date
 
 ''' <summary>
-''' Guarda el token en la hoja de configuración (oculta opcionalmente)
+''' Guarda los tokens en la hoja Config (persistencia entre sesiones).
 ''' </summary>
 Public Sub SaveTokens(ByVal accToken As String, ByVal refToken As String, ByVal expiresIn As Long)
     Dim ws As Worksheet
@@ -42,7 +45,7 @@ Public Sub SaveTokens(ByVal accToken As String, ByVal refToken As String, ByVal 
 End Sub
 
 ''' <summary>
-''' Carga los tokens desde la hoja de configuración
+''' Carga los tokens desde la hoja Config.
 ''' </summary>
 Public Sub LoadTokens()
     Dim ws As Worksheet
@@ -55,6 +58,19 @@ Public Sub LoadTokens()
     End If
     On Error GoTo 0
 End Sub
+
+''' <summary>
+''' Verifica si Python + xlwings están disponibles.
+''' </summary>
+Public Function HasPython() As Boolean
+    On Error GoTo NoPython
+    Dim testResult As String
+    testResult = Application.Run("RunPython", "print('ok')")
+    HasPython = True
+    Exit Function
+NoPython:
+    HasPython = False
+End Function
 
 Private Function GetOrCreateSheet(sheetName As String) As Worksheet
     On Error Resume Next

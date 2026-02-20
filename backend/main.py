@@ -23,7 +23,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("crud-planner")
 
-app = FastAPI(title="CRUD-Planner API", version="2.0.0")
+app = FastAPI(
+    title="CRUD-Planner API",
+    version="2.0.0",
+    docs_url="/api-docs",
+    redoc_url="/api-redoc"
+)
 
 # ─── Request Logging Middleware ─────────────────────────────────
 @app.middleware("http")
@@ -38,18 +43,29 @@ async def log_requests(request: Request, call_next):
 def root():
     return RedirectResponse(url="/app/index.html")
 
-# Servir el frontend estático desde /app
-base_path = os.path.dirname(os.path.dirname(__file__))
+# Servir activos estáticos con rutas absolutas
+import logging
+logger = logging.getLogger("uvicorn")
+
+base_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 frontend_path = os.path.join(base_path, "frontend")
 info_path = os.path.join(base_path, "info")
 docs_path = os.path.join(base_path, "docs")
 
 if os.path.exists(frontend_path):
     app.mount("/app", StaticFiles(directory=frontend_path), name="frontend")
+    logger.info(f"Mounted /app from {frontend_path}")
+
 if os.path.exists(info_path):
     app.mount("/info", StaticFiles(directory=info_path), name="info")
+    logger.info(f"Mounted /info from {info_path}")
+
 if os.path.exists(docs_path):
+    # Nota: docs_url de FastAPI se movió a /api-docs para evitar conflicto
     app.mount("/docs", StaticFiles(directory=docs_path), name="docs")
+    logger.info(f"Mounted /docs from {docs_path}")
+else:
+    logger.warning(f"Docs path NOT found: {docs_path}")
 
 # Permitir CORS para pruebas locales
 app.add_middleware(

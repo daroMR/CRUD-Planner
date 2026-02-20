@@ -1,114 +1,52 @@
-# 📊 Pilar 2 — Flujo de Datos 360°
+# 📊 Pilar 2 — Flujo de Datos 360° Supreme
 
-> **Descripción:** Los tres ciclos de sincronización del sistema. Diagramas de secuencia para cada modo de operación.
-
----
-
-## Modo 1: SYNC / PULL (Full)
-
-Descarga **todos** los datos de Planner y reescribe Excel desde cero. Aplica estilo premium.
-
-```
-Usuario Excel        SyncModule.bas        planner_sync.py        MS Graph API
-     │                     │                      │                      │
-     │─── Click [🔄 Sync] ─▶│                      │                      │
-     │                     │─── RunPython('full') ▶│                      │
-     │                     │                      │── GET /me/planner/plans ──▶│
-     │                     │                      │◀────────── [{id, title}] ──│
-     │                     │                      │                      │
-     │                     │                      │─ GET /plans/{id}/tasks ───▶│
-     │                     │                      │◀──── [{title, desc, etag}] │
-     │                     │                      │                      │
-     │                     │         ┌────────────────────────────┐      │
-     │                     │         │  parse_description(desc)   │      │
-     │                     │         │  → ##Dinero → float        │      │
-     │                     │         │  → ##Fecha  → datetime     │      │
-     │                     │         │  → ##Check  → bool         │      │
-     │                     │         └────────────────────────────┘      │
-     │                     │                      │                      │
-     │◀────── Escribe data + ETag en celdas ──────│                      │
-     │◀────── apply_premium_styling() ────────────│                      │
-```
+> **Descripción:** Ciclos de sincronización de alta fidelidad. Gestión de estados, ETags y persistencia híbrida.
 
 ---
 
-## Modo 2: COMPARE (Semáforo 4-Estados)
+## 🔄 Modo 1: SYNC / PULL (Full)
 
-Lee ETags de Excel, los compara con Planner **y** detecta ediciones locales. Pinta filas sin sobrescribir datos.
+Sincronización total de la jerarquía Planner → UX. 
 
-```
-Usuario Excel        SyncModule.bas        planner_sync.py        MS Graph API
-     │                     │                      │                      │
-     │─── Click [🔍 Comp] ─▶│                      │                      │
-     │                     │─── RunPython('comp') ▶│                      │
-     │                     │                      │── GET /plans/{id}/tasks ──▶│
-     │                     │                      │◀────── [{id, etag_P}] ────│
-     │                     │                      │                      │
-     │                     │         ┌──────────────────────────────────────┐
-     │                     │         │ POR CADA TAREA:                      │
-     │                     │         │                                      │
-     │                     │         │  planner_changed = etag_P ≠ etag_E  │
-     │                     │         │  excel_changed   = title/status ≠   │
-     │                     │         │                                      │
-     │                     │         │  IF ambos:  → 🟥 COLOR_CONFLICT     │
-     │                     │         │  ELIF Planner: → 🟧 PLANNER_NEW     │
-     │                     │         │  ELIF Excel:   → 🟦 EXCEL_NEW       │
-     │                     │         │  ELSE:         → ⬜ DEFAULT          │
-     │                     │         └──────────────────────────────────────┘
-     │                     │                      │
-     │◀────────── Aplica color en filas (sin borrar datos) ──────────────│
-```
+- **Backend**: Realiza llamadas recursivas a Graph API (Plans -> Buckets -> Tasks).
+- **Procesamiento**: El motor `parse_description` decodifica los metadatos `##Dinero`, `##Fecha` y `##B-`.
+- **Frontend**: Renderizado jerárquico dinámico con `renderResumenArbol` y actualización del `Maestro de Datos`.
 
 ---
 
-## Modo 3: PUSH 🆕 (Excel → Planner)
+## 🔍 Modo 2: INTELLIGENT COMPARE
 
-Lee ediciones de Excel y las sube a Planner usando `PATCH` con `If-Match` (ETag) para evitar sobrescribir trabajo ajeno.
+Comparación reactiva basada en ETags para prevenir sobrescritura de datos.
 
-```
-Usuario Excel        SyncModule.bas        planner_sync.py        MS Graph API
-     │                     │                      │                      │
-     │─── Click [⬆️ Push] ─▶│                      │                      │
-     │                     │─── RunPython('push') ▶│                      │
-     │                     │                      │                      │
-     │                     │         ┌─────────────────────────────────┐  │
-     │                     │         │ POR CADA FILA DE EXCEL:         │  │
-     │                     │         │  lee: task_id, etag, title, %  │  │
-     │                     │         └─────────────────────────────────┘  │
-     │                     │                      │                      │
-     │                     │                      │── PATCH /planner/tasks/{id} ──▶│
-     │                     │                      │── Header: If-Match: {etag} ───▶│
-     │                     │                      │                      │
-     │                     │         ┌─────────────────────────────────┐  │
-     │                     │         │ HTTP 200: OK                   │  │
-     │                     │         │   → Actualiza ETag en Excel    │  │
-     │                     │         │ HTTP 412: Conflicto            │  │
-     │                     │         │   → Pinta fila 🟥 CONFLICT     │  │
-     │                     │         └─────────────────────────────────┘  │
-```
+1. **Lectura local**: El sistema carga los ETags almacenados en el estado actual.
+2. **Consulta remota**: Obtiene los headers `@odata.etag` más recientes de Microsoft Planner.
+3. **Validación**:
+    - `planner_changed`: `@odata.etag` remoto ≠ local.
+    - `excel_changed`: Datos en el grid ≠ datos originales.
+4. **Semáforo**: Visualización de conflictos 🟥, cambios en Planner 🟧 y cambios locales 🟦.
 
 ---
 
-## Modelo de Datos: Planner JSON → Excel Tabular
+## ⬆️ Modo 3: PUSH SUPREME (Create / Update / Delete)
 
-| Columna Excel | Campo Graph API | Transformación |
-|:---|:---|:---|
-| `Task ID` | `task.id` | Directo (string UUID) |
-| `Bucket ID` | `task.bucketId` | Directo |
-| `Task Title` | `task.title` | Directo |
-| `Status` | `task.percentComplete` | 0→"Sin Iniciar", 50→"Iniciada", 100→"Completada" |
-| `Start Date` | `task.startDateTime` | ISO 8601 → fecha Excel |
-| `Due Date` | `task.dueDateTime` | ISO 8601 → fecha Excel |
-| `Dinero` | `##Dinero` en `details.description` | Regex → float |
-| `Fecha Pago` | `##Fecha` en `details.description` | Regex → datetime |
-| `Pagado` | `##B-Pagado` en `details.description` | Regex → bool |
-| `ETag` | `task['@odata.etag']` | Almacenado para Compare/Push |
+Gestión total de ciclo de vida con integridad garantizada mediante `If-Match`.
+
+### Actualización (PATCH)
+- Envía el ETag más reciente en el header `If-Match`.
+- Si el servidor devuelve `412 Precondition Failed`, se activa el protocolo de resolución de conflictos.
+
+### Creación (POST)
+- **Bucket/Task**: Requiere el UUID del contenedor superior.
+- **Plan**: Soporte para creación de `plannerPlan` con asignación automática de ID.
+
+### Borrado (DELETE) 🆕
+- **Real Graph Delete**: Soporte nativo para `DELETE /planner/plans/{id}`.
+- **Lazy ETag Fetch**: Si no se dispone del ETag, el sistema realiza una petición `GET` previa para obtenerlo y asegurar el borrado atómico.
 
 ---
 
-## Fallback VBA (V1 Modo)
+## 🏛️ Persistencia Híbrida (Fallback)
 
-Cuando `HasPython() = False`, `SyncModule.bas` ejecuta `FetchAll_VBA()`:
-- Solo descarga `title`, `bucketId`, `percentComplete`, `@odata.etag`.
-- Sin parsing de `##Tags`. Sin Premium Styling.
-- Disponible como red de seguridad sin dependencias externas.
+Ante fallos de red o falta de tokens:
+1. **SQLite Local**: La arquitectura detecta si el ID es un entero (local) o UUID (Graph).
+2. **Sincronización Silenciosa**: El sistema intenta persistir en ambas capas cuando es posible, garantizando que el usuario nunca pierda su trabajo.

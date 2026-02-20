@@ -1,92 +1,30 @@
-# 📡 Pilar 3 — Contratos API & Especificación de Tags
+# 🔌 Pilar 3 — API & Contratos Supreme
 
-> **Descripción:** Referencia técnica de los contratos de API consumidos (Graph), expuestos (FastAPI/GraphQL) y el lenguaje de etiquetas propietario `##Tag`.
-
-> ⚠️ **Nota de auditoría:** El backend web (`main.py`) no envía el header `If-Match` en PATCH a Planner → Error `412 Precondition Failed`. El motor Python V2 **sí lo implementa** correctamente en `graph_patch()`.
+> **Descripción:** El Hilo Dorado de la información. Especificación de contratos REST, GraphQL y el esquema de metadatos `##Tags`.
 
 ---
 
-## ☁️ Microsoft Graph API — Endpoints Consumidos
+## 🌐 Microsoft Graph API (Contract)
 
-### Track Excel (V2: `planner_sync.py`)
+El sistema se integra con los enpoints de Planner v1.0 utilizando una estrategia de **Lazy ETag Management**.
 
-| Endpoint | Método | Descripción | Auth |
-|:---|:---:|:---|:---|
-| `/me/planner/plans` | GET | Lista todos los planes del usuario | Client Credentials |
-| `/planner/plans/{id}/tasks` | GET | Tareas de un plan | Client Credentials |
-| `/planner/tasks/{id}` | PATCH | Actualiza título/status | Client Credentials + `If-Match` ✅ |
+| Entidad | Endpoint | Verbo | Concurrencia |
+|:---|:---|:---|:---|
+| **Plan** | `/planner/plans/{id}` | `GET, PATCH, DELETE` | If-Match (ETag) |
+| **Bucket** | `/planner/buckets/{id}` | `GET, PATCH, DELETE` | If-Match (ETag) |
+| **Task** | `/planner/tasks/{id}` | `GET, PATCH, DELETE` | If-Match (ETag) |
 
-### Track Web (`backend/auth.py`, `backend/main.py`)
-
-| Endpoint | Método | Descripción | Auth |
-|:---|:---:|:---|:---|
-| `/me/planner/plans` | GET | Lista planes del usuario autenticado | Device Flow |
-| `/planner/plans/{id}/buckets` | GET | Buckets del plan | Device Flow |
-| `/planner/buckets/{id}/tasks` | GET | Tareas del bucket | Device Flow |
-| `/planner/tasks/{id}` | PATCH | Actualiza tarea | Device Flow (sin `If-Match` ⚠️) |
-| `/planner/tasks/{id}` | DELETE | Elimina tarea | Device Flow |
+> [!IMPORTANT]
+> El borrado de planes es definitivo. El sistema implementa un pre-fetch de metadatos para asegurar que el `If-Match` sea válido en el momento de la ejecución.
 
 ---
 
-## 🏷️ Especificación del Lenguaje `##Tag`
+## 🕸️ GraphQL Engine (Hierarchy)
 
-Las etiquetas se embeben en el campo `description` de cada tarea de Planner. Son parseadas por `parse_description()` en `planner_sync.py` usando regex.
-
-### Sintaxis General
-```
-##NombreTag: valor
-```
-
-### Etiquetas Soportadas
-
-| Tag | Aliases | Tipo Resultante | Ejemplo |
-|:---|:---|:---:|:---|
-| `##Dinero` | `##$`, `##Monto` | `float` | `##Dinero: 1500.00` |
-| `##Fecha` | `##FechaPago`, `##Date` | `datetime` | `##Fecha: 2025-03-15` |
-| `##B-Pagado` | `##Pagado`, `##Paid` | `bool` | `##B-Pagado: ON` |
-| `##Prioridad` | `##P`, `##Priority` | `str` | `##Prioridad: Alta` |
-| `##Notas` | `##Notes`, `##Obs` | `str` | `##Notas: Verificar con cliente` |
-
-### Ejemplo de `description` completo
-```
-Reunión de seguimiento con proveedor
-##Dinero: 2500.00
-##Fecha: 2025-04-10
-##B-Pagado: OFF
-##Prioridad: Alta
-##Notas: Pendiente firma de contrato
-```
-
----
-
-## ⚡ FastAPI Backend — Endpoints Expuestos
-
-Base URL: `http://localhost:8000`
-
-### Autenticación
-| Endpoint | Método | Descripción |
-|:---|:---:|:---|
-| `/auth/login` | GET | Inicia Device Flow → devuelve `user_code` + `verification_uri` |
-| `/auth/complete` | POST | Completa el flujo, obtiene token |
-| `/auth/status` | GET | Verifica si hay sesión activa |
-
-### REST CRUD
-| Endpoint | Método | Graph? | DB Fallback? |
-|:---|:---:|:---:|:---:|
-| `/plans` | GET | ✅ | ✅ |
-| `/plans` | POST | ❌ | ✅ Solo local |
-| `/buckets?plan_id=` | GET | ✅ | ✅ |
-| `/buckets` | POST | ❌ | ✅ Solo local |
-| `/tasks?bucket_id=` | GET | ✅ | ✅ |
-| `/tasks` | POST | ❌ | ✅ Solo local |
-| `/tasks/{id}` | PUT | ✅ (sin `If-Match` ⚠️) | ✅ |
-| `/tasks/{id}` | DELETE | ✅ | ✅ |
-
-### GraphQL
-Disponible en `http://localhost:8000/graphql` (Strawberry)
+Para evitar el *over-fetching* y soportar una UI por slides, el sistema expone un esquema jerárquico.
 
 ```graphql
-query {
+query PlannerSummary {
   plans {
     id
     name
@@ -103,12 +41,27 @@ query {
 }
 ```
 
+- **Motor**: Strawberry GraphQL (FastAPI).
+- **Resolver**: Conectado a un contexto híbrido que detecta la fuente de datos óptima (Graph o DB Local).
+
 ---
 
-## 🗄️ Modelo Local (SQLAlchemy)
+## 🏷️ Esquema de Metadatos: The Golden Thread
 
-```python
-Plan:    id(PK, str), name(str)
-Bucket:  id(PK, str), name(str), plan_id(FK→Plan)
-Task:    id(PK, str), title(str), percent_complete(int), bucket_id(FK→Bucket)
-```
+El "Hilo Dorado" se teje en el campo `description` de las tareas mediante una sintaxis de etiquetas enriquecidas.
+
+| Etiqueta | Tipo | Uso en Excel | Uso en Web |
+|:---|:---|:---|:---|
+| `##D-` | Dinero (`float`) | Columna Financiera | Badge de Costo |
+| `##F-` | Fecha (`date`) | Columna de Pago | Calendario |
+| `##B-` | Booleano (`bool`) | Checkbox | Toggle Switch |
+
+---
+
+## 🔐 Contratos Local vs Cloud
+
+El sistema detecta automáticamente el destino mediante la naturaleza del ID:
+- **ID Numérico (1, 2, 105...)**: Persistencia en base de datos local (SQLAlchemy).
+- **ID UUID (String largo)**: Operación directa sobre Microsoft Graph.
+
+Esta dualidad garantiza que el proyecto sea **portable y resiliente** ante cualquier entorno.

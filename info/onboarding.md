@@ -1,91 +1,70 @@
-# 🧭 Onboarding — CRUD-Planner
+# 🧭 Onboarding — CRUD-Planner Supreme
 
 ## 🎯 ¿Qué es esto en 30 segundos?
 
-Un repositorio con **dos productos independientes** conectados a Microsoft Planner:
+Un ecosistema avanzado de gestión de proyectos que conecta **Excel y Web** con Microsoft Planner mediante una sincronización inteligente y una interfaz de usuario de alto impacto.
 
-- **Track Excel (V2):** Motor Python + VBA → sincroniza Planner ↔ Excel con semáforo visual e historia de cambios.
-- **Track Web:** FastAPI + SPA → CRUD desde el browser, portable, sin Docker.
+- **Track Excel (V2):** Sincronización bidireccional Planner ↔ Excel con semáforo inteligente y gestión de ETags.
+- **Track Web (Premium UX):** SPA moderna con navegación por slides, diseño responsivo y CRUD total (incluyendo borrado de planes) sincronizado en tiempo real.
 
 ---
 
 ## 🚀 Guía Rápida
 
-### Track Excel (V2)
+### Track Web (The Ghost Experience)
 
 ```bash
-# 1. Instalar dependencias
-cd v2
-pip install -r requirements.txt
-
-# 2. Configurar credenciales
-cp .env.example .env   # editar CLIENT_ID, TENANT_ID, CLIENT_SECRET
-
-# 3. Importar módulos VBA en tu .xlsm
-# Importar los 4 archivos de v2/vba/ en el editor VBA (Alt+F11)
-# Asignar los botones del panel a:
-#   LoginPlanner / ActualizarPlanner / CompararPlanner / SubirCambiosPlanner
-```
-
-### Track Web
-
-```bash
-# 1. Instalar dependencias
+# 1. Backend FastAPI
 cd backend
 pip install -r requirements.txt
-
-# 2. Lanzar el backend
 uvicorn main:app --reload
 
-# 3. Abrir el frontend
-# Abrir frontend/index.html en el browser (o servir con Live Server)
-
-# 4. Para compartir externamente (sin servidor)
-ngrok http 8000   # Genera URL pública temporal
+# 2. Frontend Ultra-Moderno
+# Accede a http://localhost:8000/app/index.html
+# Disfruta de la navegación fluida por slides y el sidebar inteligente.
 ```
 
 ---
 
-## 📂 Mapa de Documentación
+## 📂 Mapa de Documentación Estratégica
+
+Ahora accesible directamente desde el **Centro de Documentación** interno en la App.
 
 ```
-/docs/
-├── pilar1-ecosistema.md      ← Arquitectura general y componentes
-├── pilar2-flujo-datos.md     ← Diagramas de secuencia (Full/Compare/Push)
-├── pilar3-api-contratos.md   ← Graph API, ##Tags, REST, GraphQL
-└── pilar4-adr.md             ← 7 Decisiones de arquitectura
+/docs/ (Arquitectura)
+├── pilar1-ecosistema.md      ← Ecosistema Híbrido & Componentes
+├── pilar2-flujo-datos.md     ← Sincronización Inteligente & ETags
+├── pilar3-api-contratos.md   ← Graph API & GraphQL (The Golden Thread)
+└── pilar4-adr.md             ← Registro de Decisiones Arquitectónicas
 
-/info/
-├── blueprint.d2              ← Golden Thread Map (código fuente D2)
-├── golden-thread.svg         ← Diagrama vectorial (zoom infinito)
-├── golden-thread.png         ← Diagrama para presentaciones
-└── onboarding.md             ← ESTÁS AQUÍ
+/info/ (Estrategia Master)
+├── blueprint.d2              ← Golden Thread Map (D2 Visual Source)
+├── onboarding.md             ← ESTÁS AQUÍ (Manual de Vuelo)
+└── golden-thread.png         ← Mapa Estratégico (Visualización 4K)
 ```
 
 ---
 
-## 🎨 Renderizar el Golden Thread Map
+## 🎨 Renderizar el Golden Thread Map (Protocolo Supreme)
+
+Para actualizar el mapa visual, usa el motor `tala` (obligatorio para evitar cruces):
 
 ```bash
-# SVG (para browser / 4K)
-d2 --layout elk --theme 200 info/blueprint.d2 info/golden-thread.svg
+# Generación en alta resolución
+d2 --layout tala --theme 200 info/blueprint.d2 info/golden-thread.svg
+d2 --layout tala --theme 200 info/blueprint.d2 info/golden-thread.png
 
-# PNG (para docs / presentaciones)
-d2 --layout elk --theme 200 info/blueprint.d2 info/golden-thread.png
-
-# Watch mode (hot reload al editar .d2)
-d2 --watch --layout elk --theme 200 info/blueprint.d2
+# Modo Desarrollo (Hot Reload)
+d2 --watch --layout tala --theme 200 info/blueprint.d2
 ```
-
-> Los archivos `.svg` y `.png` están en `.gitignore` — son generados, no versionados.
 
 ---
 
-## 🔐 Variables de Entorno requeridas (`.env`)
+## 🔐 Infraestructura & Seguridad
+
+El sistema opera con **Cero Configuración** en la nube para el usuario final, delegando la persistencia en Graph API o SQLite local.
 
 ```env
 MS_GRAPH_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-MS_GRAPH_TENANT_ID=common
-MS_GRAPH_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 DATABASE_URL=sqlite:///./planner.db
 ```

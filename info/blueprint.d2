@@ -274,9 +274,12 @@ WEB_TRACK: "🌐 TRACK WEB (Portable)" {
     font-size: 14
   }
 
-  SPA: "🖥️ Frontend SPA\n(HTML/JS/CSS)" {
+  SPA: "🖥️ Frontend SPA\n(Premium Slides)" {
     class: web
-    tooltip: "Minisite estático. Se puede hostear en GitHub Pages o Render.com"
+    tooltip: "Navegación horizontal por slides. Diseño responsivo y glassmorphism."
+    
+    NAV: "Slide Navigation\n(SwitchSlide)"
+    DOC_CENTER: "📖 Centro de Doc\n(Docs & Info)"
   }
 
   FASTAPI: "⚡ FastAPI\n(python main.py)" {
@@ -309,10 +312,8 @@ WEB_TRACK: "🌐 TRACK WEB (Portable)" {
     D3: "GitHub Pages\n(Solo Frontend)"
   }
 
-  SPA -> FASTAPI: "Consume API" {
-    style.stroke: "#818CF8"
-    style.animated: true
-  }
+  SPA.DOC_CENTER -> FASTAPI: "Fetch /info & /docs"
+  SPA.NAV -> FASTAPI: "Consume API"
   FASTAPI -> AUTH_WEB
   FASTAPI -> GQL
   FASTAPI -> LOCAL_DB: "ORM Fallback" {

@@ -1,89 +1,61 @@
-# 🏛️ Pilar 1 — Ecosistema Híbrido
+# 🏛️ Pilar 1 — Ecosistema Híbrido Supreme
 
-> **Descripción:** Vista general de la arquitectura del proyecto. Dos tracks independientes que convergen en Microsoft Planner como fuente de verdad.
+> **Descripción:** Arquitectura de alta disponibilidad y UX Premium. Dos tracks independientes que convergen en Microsoft Planner como fuente de verdad única.
 
 ---
 
 ## Resumen Ejecutivo
 
-**CRUD-Planner** es un repositorio que alberga **dos productos independientes** unidos por la misma fuente de verdad: **Microsoft Planner** vía Graph API.
+**CRUD-Planner** evoluciona hacia una solución de gestión integral donde la robustez del motor Excel se une a la elegancia de una interfaz web por slides.
 
 | Track | Stack | Propósito | Interfaz |
 |:---:|:---|:---|:---|
-| **Track Excel (V2)** | Python + xlwings + VBA (`v2/`) | Sync Planner ↔ Excel: Pull, Compare y Push bidireccional con semáforo visual. | Excel Desktop (.xlsm) |
-| **Track Web** | FastAPI + Strawberry + SQLAlchemy (`backend/` + `frontend/`) | CRUD web con fallback local. API REST + GraphQL. Despliegue portable. | Browser SPA |
-
-> ⚠️ Los dos tracks **no se comunican entre sí**. Comparten credenciales Azure (`.env`) y la fuente de datos (Planner/Graph), pero tienen autenticación, lógica y ciclo de vida **completamente separados**.
+| **Track Excel (V2)** | Python + xlwings + VBA | Sincronización analítica y control masivo de datos con semáforo visual. | Excel Desktop (.xlsm) |
+| **Track Web (Premium)** | FastAPI + GraphQL + Vanilla CSS | Gestión ágil y móvil con navegación por slides, modo oscuro y CRUD completo. | SPA Responsiva |
 
 ---
 
-## 🗺️ Mapa de Componentes
+## 🗺️ Mapa de Componentes (The Ghost Architecture)
 
 ```
 c:\CRUD-Planner\
 │
-├── v2/                           ★ TRACK EXCEL (ACTIVO)
-│   ├── planner_sync.py           # Motor: Auth → Fetch → Parse → Write → Push
-│   ├── requirements.txt          # msal, requests, xlwings, python-dotenv
-│   └── vba/                      # Módulos VBA definitivos
-│       ├── SyncModule.bas        # CEREBRO: Orquestador V2/V1 híbrido
-│       ├── ModConfig.bas         # Constantes, tokens, HasPython()
-│       ├── ModAuth.bas           # Device Flow, Refresh, Clipboard helper
-│       ├── ModGraphAPI.bas       # GET/PATCH con If-Match y retry 401
-│       └── JsonConverter.bas     # Parser JSON para el Auth VBA
+├── backend/                      ★ API MASTER (REST + GraphQL)
+│   ├── main.py                   # Exposición de activos /info, /docs y /app
+│   ├── auth.py                   # MSAL Device Flow consolidado
+│   ├── models.py/schemas.py      # Persistencia local resiliente
+│   └── graphql_schema.py         # Nodo de consulta jerárquica
 │
-├── backend/                      ★ TRACK WEB (ACTIVO)
-│   ├── main.py                   # FastAPI: REST + GraphQL, fallback a SQLite
-│   ├── auth.py                   # MSAL PublicClient + Device Flow
-│   ├── graphql_schema.py         # Strawberry: Query plans{buckets{tasks}}
-│   ├── models.py                 # SQLAlchemy: Plan, Bucket, Task
-│   ├── schemas.py                # Pydantic: BaseModel para validación
-│   ├── database.py               # Engine + get_db dependency
-│   └── requirements.txt          # fastapi, uvicorn, strawberry, sqlalchemy
+├── frontend/                     ★ UX PREMIUM (Slides & Sidebar)
+│   ├── index.html                # Estructura por slides: Dashboard, Gestión, Maestro e Info
+│   ├── app.js                    # Lógica defensiva & Navegación fluida
+│   └── style.css                 # Glassmorphism & Media Queries (Full Responsive)
 │
-├── frontend/                     ★ TRACK WEB (ACTIVO)
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
+├── info/                         ★ INTELIGENCIA (Golden Thread)
+│   ├── blueprint.d2              # Mapa fuente (Layout: Tala)
+│   ├── onboarding.md             # Guía táctica de despliegue
+│   └── golden-thread.png         # Visualización estratégica 4K
 │
-├── info/                         ★ DOCUMENTACIÓN (Pilares 5)
-│   ├── blueprint.d2              # Golden Thread Map (código fuente)
-│   └── onboarding.md             # Guía estratégica de acceso
+├── docs/                         ★ ARQUITECTURA (Pilares 1-4)
 │
-├── docs/                         ★ DOCUMENTACIÓN TÉCNICA (Pilares 1-4)
-│
-├── .env                          # Credenciales Azure (compartidas, NO versionar)
-├── README.md                     # Portal de entrada y guía rápida
-├── requirements.txt              # Dependencias raíz (para Render/Deploy)
-├── Procfile                      # Comandos de ejecución para Render
-└── render.yaml                   # Configuración de automatización Render
+├── requirements.txt              # Motor unificado para Render
+└── render.yaml                   # Orquestación de infraestructura
 ```
 
 ---
 
-## 🔐 Modelo de Autenticación por Track
+## 🔐 Modelo de Autenticación Unificado
 
-| Aspecto | Track Excel (V2) | Track Web |
-|:---|:---|:---|
-| **Módulo** | `ModAuth.bas` + `planner_sync.py` | `backend/auth.py` |
-| **Flujo** | Device Code (usuario autentica manualmente en `microsoft.com/devicelogin`) | Device Code (usuario autentica vía `GET /auth/login`) |
-| **Client** | `ConfidentialClientApplication` (script) / `PublicClient` (VBA) | `PublicClientApplication` |
-| **Grant** | `client_credentials` (V2 Script) / `device_code` (VBA) | `device_code` |
-| **Token Cache** | Hoja "Config" en `.xlsm` (VBA) | `token_cache.bin` (backend) |
-| **Scope** | `Tasks.ReadWrite User.Read` | `Tasks.ReadWrite User.Read` |
+Ambos tracks utilizan flujos de Microsoft Identity pero con propósitos distintos:
+
+- **Excel Track**: Utiliza flujos delegados y scripts de Python para comparaciones pesadas.
+- **Web Track**: Implementa un flujo de dispositivo integrado en el UI que cachea el token en el servidor para una experiencia sin interrupciones.
 
 ---
 
-## 🔧 Stack de Tecnologías
+## 🔧 Stack de Tecnologías (Supreme Edition)
 
-| Capa | Tecnología | Versión recomendada |
-|:---|:---|:---|
-| Python (V2 + Backend) | Python | 3.11+ |
-| Excel Integration | xlwings | 0.28+ |
-| HTTP Client | requests (V2), httpx (Backend) | Latest |
-| Auth | MSAL (Python) | 1.24+ |
-| Web Framework | FastAPI | 0.110+ |
-| GraphQL | Strawberry | 0.220+ |
-| ORM | SQLAlchemy | 2.0+ |
-| DB Local | SQLite (dev) / PostgreSQL (prod) | — |
-| VBA Runtime | VBA 7.1 | Excel 2016+ |
+- **Frontend**: Vanilla JS (Zero dependencies) para máxima velocidad y control. CSS dinámico con variables y transiciones de 0.4s.
+- **Backend**: FastAPI (Python 3.11+) operando en modo asíncrono para concurrencia masiva.
+- **Data**: Strawberry GraphQL para consultas de árbol y SQLAlchemy para el fallback de base de datos local.
+- **DevOps**: Git-flow automatizado con despliegue continuo en Render.com.

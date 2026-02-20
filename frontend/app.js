@@ -423,12 +423,13 @@ async function actualizarPlan() {
 async function eliminarPlan() {
     const id = document.getElementById('managePlanId').value;
     if (!id) return log('ID es obligatorio', 'error');
-    if (!confirm('¿Estás seguro de eliminar este plan (Local)? Nota: Microsoft Graph no permite borrar planes directamente.')) return;
+    if (!confirm('¿Estás seguro de eliminar este plan? Se eliminará permanentemente de ' + (isNaN(id) ? 'Microsoft Planner' : 'la base de datos local') + '.')) return;
 
     try {
+        log(`⏳ Eliminando plan ${id}...`, 'info');
         await apiDelete(`/plans/${id}`);
-        log(`Plan ${id} eliminado`, 'success');
-        listarPlanes();
+        log(`Plan ${id} eliminado con éxito`, 'success');
+        refreshAll(); // Refresca todo para actualizar selectores y tablas
     } catch (e) { log('Error: ' + e.message, 'error'); }
 }
 

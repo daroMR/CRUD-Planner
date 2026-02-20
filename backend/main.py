@@ -182,16 +182,26 @@ async def update_plan(plan_id: str, plan: schemas.PlanCreate, db: Session = Depe
 
 @app.delete("/plans/{plan_id}")
 async def delete_plan(plan_id: str, db: Session = Depends(database.get_db)):
+    # 1. Local Fallback
     if plan_id.isdigit():
         db_plan = db.query(models.Plan).filter(models.Plan.id == int(plan_id)).first()
         if db_plan:
             db.delete(db_plan)
             db.commit()
             return {"ok": True}
+        raise HTTPException(status_code=404, detail="Plan local no encontrado")
     
-    # Planner no expone un endpoint de DELETE para planes directamente (se borra el grupo)
-    # Mostramos error o mensaje informativo
-    raise HTTPException(status_code=400, detail="Microsoft Graph no permite eliminar planes directamente. Se debe eliminar el Grupo de O365 asociado.")
+    # 2. Microsoft Graph Support
+    # Necesitamos el ETag para el DELETE
+    plan_data = await graph_call("GET", f"/planner/plans/{plan_id}")
+    if not plan_data:
+        raise HTTPException(status_code=404, detail="Plan no encontrado en Microsoft Graph")
+    
+    etag = plan_data.get("@odata.etag")
+    res = await graph_call("DELETE", f"/planner/plans/{plan_id}", headers={"If-Match": etag})
+    
+    # DELETE exitoso devuelve status 204 (res suele ser None en nuestro wrapper)
+    return {"ok": True, "detail": "Plan eliminado de Microsoft Graph"}
 
 # -----------------------------
 # CRUD de Buckets

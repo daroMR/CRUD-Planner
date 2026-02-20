@@ -36,8 +36,12 @@ function showLoading(show) {
 }
 
 // -----------------------------
-// Navegación por Slides
+// Navegación por Slides y Sidebar
 // -----------------------------
+
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+}
 
 function switchSlide(slideId) {
     // 1. Quitar activo de todos los slides y nav items
@@ -61,6 +65,11 @@ function switchSlide(slideId) {
         document.getElementById('current-slide-title').innerText = titleMap[slideId] || 'Panel';
 
         log(`Cambiando a vista: ${titleMap[slideId]}`, 'info');
+
+        // 4. Autocerrar sidebar en móviles tras navegar
+        if (window.innerWidth <= 768) {
+            document.body.classList.remove('sidebar-open');
+        }
     }
 }
 

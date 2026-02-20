@@ -83,17 +83,27 @@ app.include_router(graphql_app, prefix="/graphql")
 # -----------------------------
 # Helper para Graph API
 # -----------------------------
-async def graph_call(method: str, endpoint: str, data: dict = None):
+async def graph_call(method: str, endpoint: str, data: dict = None, etag: str = None):
     token = auth.get_access_token()
     if not token:
         print(f"DEBUG: graph_call {endpoint} failed - No access token")
         return None
     
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    # If-Match header para operaciones PATCH con concurrencia optimista
+    if etag:
+        headers["If-Match"] = etag
+
     url = f"https://graph.microsoft.com/v1.0{endpoint}"
     async with httpx.AsyncClient() as client:
         print(f"DEBUG: graph_call {method} {url}")
         res = await client.request(method, url, headers=headers, json=data)
+        if res.status_code == 412:
+            print(f"Graph 412 Precondition Failed: ETag mismatch for {endpoint}")
+            return None
         if res.status_code >= 400:
             print(f"Graph Error: {res.status_code} - {res.text}")
             return None
@@ -279,8 +289,8 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(database.g
     )
 
 @app.put("/tasks/{task_id}", response_model=schemas.Task)
-async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depends(database.get_db)):
-    # Primero intentar local
+async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depends(database.get_db), if_match: str = None):
+    # Primero intentar local (ID numérico = registro SQLite)
     if task_id.isdigit():
         db_task = db.query(models.Task).filter(models.Task.id == int(task_id)).first()
         if db_task:
@@ -298,9 +308,23 @@ async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depe
                 plan_id=str(db_task.plan_id)
             )
     
-    # Si no es local, intentar Graph
-    # Implementar PATCH a Graph si es necesario
-    raise HTTPException(status_code=404, detail="Tarea no encontrada localmente y edición en Graph no implementada.")
+    # ID no numérico = UUID de Microsoft Planner → PATCH a Graph con If-Match
+    patch_body = {
+        "title": task.title,
+        "percentComplete": task.percent_complete,
+    }
+    res = await graph_call("PATCH", f"/planner/tasks/{task_id}", data=patch_body, etag=if_match)
+    if res:
+        return schemas.Task(
+            id=task_id,
+            title=task.title,
+            percent_complete=task.percent_complete,
+            bucket_id=task.bucket_id,
+            plan_id=task.plan_id
+        )
+    if res is None and if_match:
+        raise HTTPException(status_code=412, detail="Conflicto: La tarea fue modificada por otro usuario. Recarga los datos y vuelve a intentarlo.")
+    raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
 @app.delete("/tasks/{task_id}")
 async def delete_task(task_id: str, db: Session = Depends(database.get_db)):

@@ -293,14 +293,25 @@ class Mutation:
         return False
 
     @strawberry.mutation
-    def delete_task(self, info: Info, id: strawberry.ID) -> bool:
+    async def delete_task(self, info: Info, id: strawberry.ID) -> bool:
+        from main import graph_call
+
+        # Intentar DELETE en Graph si el ID es un UUID (no numérico)
+        if not str(id).isdigit():
+            res = await graph_call("DELETE", f"/planner/tasks/{id}")
+            if res is not None:
+                return True
+
+        # Fallback: buscar en DB local por ID entero
         db: Session = info.context["db"]
-        db_task = db.query(models.Task).filter(models.Task.id == id).first()
-        if not db_task:
-            raise ValueError("Task not found")
-        db.delete(db_task)
-        db.commit()
-        return True
+        if str(id).isdigit():
+            db_task = db.query(models.Task).filter(models.Task.id == int(id)).first()
+            if db_task:
+                db.delete(db_task)
+                db.commit()
+                return True
+
+        raise ValueError(f"Tarea {id} no encontrada ni en Graph ni en la base de datos local.")
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

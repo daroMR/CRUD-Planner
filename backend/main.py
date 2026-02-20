@@ -45,27 +45,34 @@ def root():
 
 # Servir activos estáticos con rutas absolutas
 import logging
+import mimetypes
+from pathlib import Path
+
+# Asegurar tipos MIME para diagramas
+mimetypes.add_type("image/svg+xml", ".svg")
+mimetypes.add_type("text/plain", ".d2")
+
 logger = logging.getLogger("uvicorn")
 
-base_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-frontend_path = os.path.join(base_path, "frontend")
-info_path = os.path.join(base_path, "info")
-docs_path = os.path.join(base_path, "docs")
+# Obtener ruta raíz del proyecto (un nivel arriba de /backend)
+root_path = Path(__file__).resolve().parent.parent
+frontend_path = root_path / "frontend"
+info_path = root_path / "info"
+docs_path = root_path / "docs"
 
-if os.path.exists(frontend_path):
-    app.mount("/app", StaticFiles(directory=frontend_path), name="frontend")
-    logger.info(f"Mounted /app from {frontend_path}")
+if frontend_path.exists():
+    app.mount("/app", StaticFiles(directory=str(frontend_path)), name="frontend")
+    logger.info(f"✓ Montado /app desde {frontend_path}")
 
-if os.path.exists(info_path):
-    app.mount("/info", StaticFiles(directory=info_path), name="info")
-    logger.info(f"Mounted /info from {info_path}")
+if info_path.exists():
+    app.mount("/info", StaticFiles(directory=str(info_path)), name="info")
+    logger.info(f"✓ Montado /info desde {info_path}")
 
-if os.path.exists(docs_path):
-    # Nota: docs_url de FastAPI se movió a /api-docs para evitar conflicto
-    app.mount("/docs", StaticFiles(directory=docs_path), name="docs")
-    logger.info(f"Mounted /docs from {docs_path}")
+if docs_path.exists():
+    app.mount("/docs", StaticFiles(directory=str(docs_path)), name="docs")
+    logger.info(f"✓ Montado /docs desde {docs_path}")
 else:
-    logger.warning(f"Docs path NOT found: {docs_path}")
+    logger.warning(f"⚠ Ruta de Docs NO encontrada: {docs_path}")
 
 # Permitir CORS para pruebas locales
 app.add_middleware(

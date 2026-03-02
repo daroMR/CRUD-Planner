@@ -8,7 +8,7 @@ Este diagrama detalla el "Hilo Dorado" de la información desde el sistema local
 sequenceDiagram
     autonumber
     participant VBA as Excel/VBA Client
-    participant MW as Stitch Middleware (Proxy)
+    participant MW as Stitch Middleware (FastAPI/Python)
     participant Graph as Microsoft Graph API
     participant Planner as Microsoft Planner (Data Store)
 

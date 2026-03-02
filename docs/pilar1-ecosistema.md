@@ -12,6 +12,7 @@
 |:---:|:---|:---|:---|
 | **Track Excel (V2)** | Python + xlwings + VBA | Sincronización analítica y control masivo de datos con semáforo visual. | Excel Desktop (.xlsm) |
 | **Track Web (Premium)** | FastAPI + GraphQL + Vanilla CSS | Gestión ágil y móvil con navegación por slides, modo oscuro y CRUD completo. | SPA Responsiva |
+| **Middleware (Stitch)** | Python (FastAPI) + React | Puente de datos de alta fidelidad entre VBA y Planner con columnas personalizadas. | Dashboard Bento-Grid |
 
 ---
 
@@ -22,9 +23,12 @@ c:\CRUD-Planner\
 │
 ├── backend/                      ★ API MASTER (REST + GraphQL)
 │   ├── main.py                   # Exposición de activos /info, /docs y /app
-│   ├── auth.py                   # MSAL Device Flow consolidado
-│   ├── models.py/schemas.py      # Persistencia local resiliente
-│   └── graphql_schema.py         # Nodo de consulta jerárquica
+│   └── ...
+│
+├── middleware/                   ★ DATA STITCHER (FastAPI + React)
+│   ├── main.py                   # Lógica de parsing Markdown (Sync Protocol)
+│   ├── tests.py                  # Pruebas de integridad de datos
+│   └── frontend/                 # UI Bento-Grid (Google Cloud Style)
 │
 ├── frontend/                     ★ UX PREMIUM (Slides & Sidebar)
 │   ├── index.html                # Estructura por slides: Dashboard, Gestión, Maestro e Info

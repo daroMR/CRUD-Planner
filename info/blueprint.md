@@ -8,7 +8,7 @@ Transformar Microsoft Planner en una base de datos extensible sin perder la simp
 | Pilar | Definición | Implementación |
 | :--- | :--- | :--- |
 | **Pilar 1 (General)** | Estética Bento-Grid | Minimalismo profesional, sombras suaves, layout responsivo. |
-| **Pilar 2 (Datos)** | Sync Flow Animado | Diagramas de secuencia mostrando el viaje del dato: VBA -> Proxy -> Planner. |
+| **Pilar 2 (Datos)** | Sync Flow Animado | Diagramas de secuencia mostrando el viaje del dato: VBA -> FastAPI Proxy -> Planner. |
 | **Pilar 3 (API)** | Contract Tables | Definición rigurosa del protocolo `## Key\nValue`. |
 | **Pilar 4 (ADR)** | Decisiones de ETag | Manejo de concurrencia y prevención de pérdida de datos. |
 | **Pilar 5 (Golden Thread)** | Integración Total | Mapa de valor: Negocio (KPIs) -> UX (Fluidez) -> Sistema (Robustez). |

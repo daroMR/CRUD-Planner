@@ -50,11 +50,12 @@ query PlannerSummary {
 
 El "Hilo Dorado" se teje en el campo `description` de las tareas mediante una sintaxis de etiquetas enriquecidas.
 
-| Etiqueta | Tipo | Uso en Excel | Uso en Web |
+| Etiqueta | Tipo | Uso en Excel | Uso en Middleware |
 |:---|:---|:---|:---|
 | `##D-` | Dinero (`float`) | Columna Financiera | Badge de Costo |
 | `##F-` | Fecha (`date`) | Columna de Pago | Calendario |
 | `##B-` | Booleano (`bool`) | Checkbox | Toggle Switch |
+| `## [Key]` | Dinámico | Campo Programático | Columna Bento-Grid |
 
 ---
 

@@ -53,7 +53,7 @@ DATABASE_URL=sqlite:///./planner.db
 | Pilar | Contenido |
 |:---|:---|
 | [Ecosistema](docs/pilar1-ecosistema.md) | Arquitectura general, mapa de componentes |
-| [Flujo de Datos](docs/pilar2-flujo-datos.md) | Diagramas Full / Compare / Push |
+| [Flujo de Datos](docs/pilar2-flujo-datos.md) | Diagramas Full / Compare / Push / **Middleware Sync** |
 | [API & Tags](docs/pilar3-api-contratos.md) | Contratos Graph, `##Tags`, REST, GraphQL |
 | [Decisiones](docs/pilar4-adr.md) | 7 ADRs de arquitectura |
 | [Golden Thread](info/onboarding.md) | Onboarding + comandos D2 |

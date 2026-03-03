@@ -1,10 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --google-blue: #0B57D0;
-  --google-grey: #F8F9FA;
+@theme {
+  --color-google-blue: #0B57D0;
+  --color-google-grey: #F8F9FA;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 body {

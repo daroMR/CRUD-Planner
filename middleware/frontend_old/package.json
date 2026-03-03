@@ -10,12 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
-    "axios": "^1.13.6",
-    "framer-motion": "^12.34.4",
-    "lucide-react": "^0.576.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "framer-motion": "^12.34.4",
+    "lucide-react": "^0.576.0",
+    "axios": "^1.13.6",
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {
